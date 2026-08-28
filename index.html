@@ -7,8 +7,8 @@
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-    header { background: #1a1b23; padding: 10px 16px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
-    .tool-group { display: flex; gap: 8px; align-items: center; }
+    header { background: #1a1b23; padding: 10px 16px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; z-index: 10; flex-wrap: wrap; gap: 8px; }
+    .tool-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     
     button { background: #2a2c37; border: 1px solid #3d4050; color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
     button:hover { background: #373a4a; }
@@ -17,20 +17,19 @@
     button.danger { background: #ef4444; border-color: #f87171; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
-    .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; }
+    .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; }
     canvas { background: #14151c; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: crosshair; }
 
-    .context-panel { position: absolute; top: 15px; right: 15px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 14px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 10px; width: 300px; max-height: calc(100% - 30px); overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .context-panel { position: absolute; top: 15px; right: 15px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 14px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 10px; width: 300px; max-height: calc(100% - 30px); overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 20; }
     .context-panel h4 { font-size: 12px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 4px; margin-top: 4px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
     .field input[type="range"] { width: 110px; }
+    .field input[type="number"] { width: 55px; background: #111217; border: 1px solid #3d4050; color: #fff; padding: 2px 4px; border-radius: 4px; text-align: center; }
 
     .gesture-list { display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d; }
-    .gesture-card { background: #1e202a; border: 1px solid #2e313d; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 11px; }
-    .gesture-card.selected { border-color: #3b82f6; background: #2563eb33; }
-
+    
     .timeline { height: 130px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
-    .timeline-controls { display: flex; align-items: center; justify-content: space-between; }
+    .timeline-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .track { position: relative; height: 32px; background: #0f1015; border: 1px solid #2e313d; border-radius: 6px; cursor: pointer; }
     .scrubber { position: absolute; top: 0; width: 3px; height: 100%; background: #ef4444; pointer-events: none; z-index: 5; }
     .kf-node { position: absolute; top: 50%; width: 12px; height: 12px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 8px #3b82f6; z-index: 4; }
@@ -40,21 +39,28 @@
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك (Pose)</button>
-      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم الهيكل (Draw)</button>
-      <button id="btn-mode-texture" onclick="setMode('texture')">🖼️ تكييف الصورة (Texture Fit)</button>
-      <button id="btn-toggle-bones" onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك</button>
+      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم الهيكل</button>
+      <button id="btn-toggle-bones" onclick="toggleBoneVisibility()">👁️ الهيكل</button>
     </div>
+    
+    <div class="tool-group" style="background:#111217; padding:4px 10px; border-radius:6px; border:1px solid #2e313d;">
+      <span style="font-size:11px; color:#94a3b8;">عرض الكانفاس:</span>
+      <input type="number" id="canvas-width-input" value="200" min="50" max="2000" onchange="resizeCanvasDimensions()">
+      <span style="font-size:11px; color:#94a3b8;">ارتفاع الكانفاس:</span>
+      <input type="number" id="canvas-height-input" value="200" min="50" max="2000" onchange="resizeCanvasDimensions()">
+    </div>
+
     <div class="tool-group">
-      <button class="accent" onclick="exportVideo()">🎬 تصدير فيديو</button>
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
-      <button class="danger" onclick="clearAll()">💥 مسح المشهد</button>
+      <button class="accent" onclick="exportVideo()">🎬 فيديو</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف عظمة</button>
+      <button class="danger" onclick="clearAll()">💥 مسح</button>
     </div>
   </header>
 
   <div class="workspace">
     <div class="canvas-container">
-      <canvas id="stage" width="960" height="600"></canvas>
+      <canvas id="stage" width="200" height="200"></canvas>
 
       <div class="context-panel" id="side-panel">
         <h3 id="panel-title" style="font-size:14px; color:#f8fafc;">اختر عظمة للتعديل</h3>
@@ -68,25 +74,16 @@
         <button onclick="document.getElementById('bone-img-file').click()">🖼️ رفع صورة ملف خاص</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
-        <h4>3. أدوات تكييف وتحجيم الصورة</h4>
+        <h4>3. أدوات تكييف وتحجيم الصورة (افتراضياً صغير)</h4>
         <div id="tex-controls" style="display:flex; flex-direction:column; gap:6px;">
-          <div class="field"><label>مط X:</label><input type="range" id="texScaleX" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
-          <div class="field"><label>مط Y:</label><input type="range" id="texScaleY" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
-          <div class="field"><label>إزاحة X:</label><input type="range" id="texOffX" min="-200" max="200" value="0" oninput="updateTex()"></div>
-          <div class="field"><label>إزاحة Y:</label><input type="range" id="texOffY" min="-200" max="200" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>مط X:</label><input type="range" id="texScaleX" min="0.05" max="3" step="0.02" value="0.3" oninput="updateTex()"></div>
+          <div class="field"><label>مط Y:</label><input type="range" id="texScaleY" min="0.05" max="3" step="0.02" value="0.3" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة X:</label><input type="range" id="texOffX" min="-150" max="150" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة Y:</label><input type="range" id="texOffY" min="-150" max="150" value="0" oninput="updateTex()"></div>
           <div class="field"><label>دوران:</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
         </div>
 
-        <h4>4. الإيماءات والمستودع</h4>
-        <button onclick="document.getElementById('gesture-files').click()">➕ إيماءة متتالية جديدة</button>
-        <input type="file" id="gesture-files" accept="image/*" multiple style="display:none;" onchange="createMultiFrameGesture(event)">
-        
-        <div id="gesture-speed-container" style="display:none; flex-direction:column; gap:4px;">
-          <div class="field"><label>سرعة الإيماءة (FPS):</label><input type="range" id="gestureFps" min="1" max="30" value="10" oninput="updateGestureSpeed()"></div>
-        </div>
-        <div class="gesture-list" id="gestureList"></div>
-
-        <h4>5. مسجل ومغيّر الصوت (Voice Pitch)</h4>
+        <h4>4. مسجل ومغيّر الصوت (Voice Pitch)</h4>
         <div style="display:flex; flex-direction:column; gap:6px;">
           <button id="btn-record-audio" onclick="toggleAudioRecording()">🎙️ بدء التسجيل الصوتي</button>
           <div class="field">
@@ -145,10 +142,10 @@
       constructor(id, parentId, x, y, length, angle) {
         this.id = id;
         this.parentId = parentId;
-        this.x = x; // إحداثي نسبى للأصل أو الأب
+        this.x = x; 
         this.y = y;
         this.length = length;
-        this.angle = angle; // زاوية نسبية
+        this.angle = angle; 
 
         this.worldX = 0;
         this.worldY = 0;
@@ -158,8 +155,19 @@
         this.gestures = [];
         this.activeGestureId = null;
 
-        this.imgTransform = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, rotation: 0 };
+        // اجعل المقاس الافتراضي للصورة أصغر بكثير (0.3 بدلاً من 1) لتلائم المساحات المصغرة كـ 200×200
+        this.imgTransform = { scaleX: 0.3, scaleY: 0.3, offsetX: 0, offsetY: 0, rotation: 0 };
       }
+    }
+
+    // --- دالة تحجيم وتغيير أبعاد مساحة العمل الفعلية (الكانفاس) ---
+    function resizeCanvasDimensions() {
+      const w = parseInt(document.getElementById('canvas-width-input').value) || 200;
+      const h = parseInt(document.getElementById('canvas-height-input').value) || 200;
+      canvas.width = w;
+      canvas.height = h;
+      autoSaveProject();
+      render();
     }
 
     async function loadLibrary() {
@@ -196,6 +204,8 @@
 
     function autoSaveProject() {
       const data = {
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
         bones: bones.map(b => ({
           id: b.id, parentId: b.parentId, x: b.x, y: b.y, length: b.length, angle: b.angle,
           imgTransform: b.imgTransform, imgSrc: b.baseImage ? b.baseImage.src : null
@@ -211,11 +221,18 @@
       const data = JSON.parse(saved);
       keyframes = data.keyframes || [];
       
+      if (data.canvasWidth && data.canvasHeight) {
+        canvas.width = data.canvasWidth;
+        canvas.height = data.canvasHeight;
+        document.getElementById('canvas-width-input').value = data.canvasWidth;
+        document.getElementById('canvas-height-input').value = data.canvasHeight;
+      }
+
       if (!data.bones || data.bones.length === 0) return;
 
       bones = data.bones.map(bData => {
         const b = new Bone(bData.id, bData.parentId, bData.x, bData.y, bData.length, bData.angle);
-        b.imgTransform = bData.imgTransform;
+        if (bData.imgTransform) b.imgTransform = bData.imgTransform;
         if (bData.imgSrc) {
           const img = new Image();
           img.onload = () => { render(); };
@@ -288,7 +305,7 @@
 
     function toggleBoneVisibility() {
       showBones = !showBones;
-      document.getElementById('btn-toggle-bones').innerText = showBones ? "👁️ إخفاء الهيكل" : "👁️ إظهار الهيكل";
+      document.getElementById('btn-toggle-bones').innerText = showBones ? "👁️ الهيكل" : "👁️ مخفي";
       render();
     }
 
@@ -302,7 +319,7 @@
       render();
     }
 
-    // نظام حساب الهيكل العظمي الهرمي الأصلي (Hierarchical Forward Kinematics)
+    // نظام الهيكل الهرمي الأصلي السليم
     function updateTransforms() {
       bones.forEach(bone => {
         if (!bone.parentId) {
@@ -312,7 +329,6 @@
         } else {
           const parent = bones.find(b => b.id === bone.parentId);
           if (parent) {
-            // إيجاد مفصل النهاية للأب بدقة لتبدأ منه العظمة الابنة تلقائياً
             const parentRad = (parent.worldAngle * Math.PI) / 180;
             const parentEndX = parent.worldX + Math.cos(parentRad) * parent.length;
             const parentEndY = parent.worldY + Math.sin(parentRad) * parent.length;
@@ -361,23 +377,22 @@
           const isSelected = bone.id === selectedBoneId;
 
           ctx.beginPath(); ctx.moveTo(bone.worldX, bone.worldY); ctx.lineTo(endX, endY);
-          ctx.lineWidth = isSelected ? 5 : 3; ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8'; ctx.stroke();
+          ctx.lineWidth = isSelected ? 4 : 2; ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8'; ctx.stroke();
 
-          ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 6, 0, Math.PI * 2);
+          ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 5, 0, Math.PI * 2);
           ctx.fillStyle = !bone.parentId ? '#ef4444' : '#ffffff'; ctx.fill(); ctx.stroke();
 
-          ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+          ctx.beginPath(); ctx.arc(endX, endY, 4, 0, Math.PI * 2);
           ctx.fillStyle = isSelected ? '#60a5fa' : '#38bdf8'; ctx.fill();
         });
 
-        // معاينة خط الرسم عند السحب في وضع الرسم (Draw Mode)
         if (mode === 'draw' && isInteracting && drawStartPos) {
           ctx.beginPath();
           ctx.moveTo(drawStartPos.x, drawStartPos.y);
           ctx.lineTo(currentMousePos.x, currentMousePos.y);
-          ctx.lineWidth = 3;
+          ctx.lineWidth = 2;
           ctx.strokeStyle = '#22c55e';
-          ctx.setLineDash([4, 4]);
+          ctx.setLineDash([3, 3]);
           ctx.stroke();
           ctx.setLineDash([]);
         }
@@ -386,8 +401,8 @@
 
     function drawGrid() {
       ctx.strokeStyle = '#1a1c24'; ctx.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-      for (let y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+      for (let x = 0; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+      for (let y = 0; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
     }
 
     function getMousePos(e) {
@@ -405,7 +420,6 @@
         let startX = pos.x;
         let startY = pos.y;
 
-        // البحث عما إذا كان الضغط يبدأ من مفصل أو نهاية عظمة موجودة لربطها بمهارة
         for (let bone of bones) {
           const rad = (bone.worldAngle * Math.PI) / 180;
           const endX = bone.worldX + Math.cos(rad) * bone.length;
@@ -417,7 +431,6 @@
             startY = endY;
             break;
           } else if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 15 && !bone.parentId) {
-            // السماح بإنشاء عظمة فرعية أخرى من الجذر الرئيسي إذا لزم الأمر
             parentBoneId = null;
             startX = bone.worldX;
             startY = bone.worldY;
@@ -429,7 +442,7 @@
       } else {
         selectedBoneId = null;
         for (let bone of bones) {
-          if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 25) {
+          if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 20) {
             selectedBoneId = bone.id;
             break;
           }
@@ -450,7 +463,6 @@
           if (!bone.parentId) {
             bone.x = pos.x; bone.y = pos.y;
           } else {
-            // تدوير العظمة بناءً على حركة الماوس حول مفصلها الأب
             const parent = bones.find(b => b.id === bone.parentId);
             if (parent) {
               const dx = pos.x - parent.worldX;
@@ -474,7 +486,7 @@
         const dy = pos.y - drawStartPos.y;
         const length = Math.hypot(dx, dy);
         
-        if (length > 5) {
+        if (length > 4) {
           const angle = Math.atan2(dy, dx) * (180 / Math.PI);
           let localAngle = angle;
 
