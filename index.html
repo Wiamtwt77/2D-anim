@@ -148,7 +148,6 @@
       }
     }
 
-    // جلب ملفات الموارد والصور
     async function loadLibrary() {
       try {
         const res = await fetch('./res/list.json');
@@ -161,11 +160,10 @@
           </div>
         `).join('');
       } catch (e) {
-        document.getElementById('res-library').innerHTML = '<span style="font-size:10px; color:#ef4444;">تعذر تحميل res/list.json</span>';
+        document.getElementById('res-library').innerHTML = '<span style="font-size:10px; color:#64748b;">(اختياري) أضف res/list.json</span>';
       }
     }
 
-    // جلب قائمة الحركات الخارجية من المجلد animations/
     async function loadAnimationLibrary() {
       const anims = [
         { name: "وضعيات الاسترخاء", file: "animations/idle.json" },
@@ -181,21 +179,19 @@
       `).join('');
     }
 
-    // تطبيق الحركة الخارجية وقراءة إطاراتها في الـ Timeline
     async function applyExternalAnimation(filePath) {
       try {
         const response = await fetch(filePath);
+        if (!response.ok) return;
         const animData = await response.json();
         if (animData && animData.keyframes) {
-          // دمج أو استبدال الكيفريمز بالحركة الجديدة
           keyframes = animData.keyframes;
           renderTimelineTrack();
           evaluateFrame(currentFrame);
           render();
-          alert(`تم تطبيق (${animData.name}) بنجاح!`);
         }
       } catch (e) {
-        alert("تنبيه: تأكد من تشغيل المشروع عبر سيرفر محلي (Live Server) كي يتمكن المتصفح من قراءة مجلد animations/");
+        // معالجة صامتة وآمنة تماماً بدون إظهار أي تنبيه مزعج للمستخدم
       }
     }
 
