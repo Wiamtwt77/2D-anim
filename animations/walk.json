@@ -1,0 +1,18 @@
+{
+  "name": "حركة المشي (Walk Cycle)",
+  "category": "motions",
+  "keyframes": [
+    {
+      "frame": 0,
+      "states": {}
+    },
+    {
+      "frame": 15,
+      "states": {}
+    },
+    {
+      "frame": 30,
+      "states": {}
+    }
+  ]
+}
