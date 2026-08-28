@@ -25,6 +25,10 @@
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
     .field input[type="range"] { width: 110px; }
 
+    .gesture-list { display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d; }
+    .gesture-card { background: #1e202a; border: 1px solid #2e313d; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 11px; }
+    .gesture-card.selected { border-color: #3b82f6; background: #2563eb33; }
+
     .timeline { height: 130px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
     .timeline-controls { display: flex; align-items: center; justify-content: space-between; }
     .track { position: relative; height: 32px; background: #0f1015; border: 1px solid #2e313d; border-radius: 6px; cursor: pointer; }
@@ -64,7 +68,7 @@
         <button onclick="document.getElementById('bone-img-file').click()">🖼️ رفع صورة ملف خاص</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
-        <h4>3. أدوات تكييف الصورة</h4>
+        <h4>3. أدوات تكييف وتحجيم الصورة</h4>
         <div id="tex-controls" style="display:flex; flex-direction:column; gap:6px;">
           <div class="field"><label>مط X:</label><input type="range" id="texScaleX" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
           <div class="field"><label>مط Y:</label><input type="range" id="texScaleY" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
@@ -73,16 +77,25 @@
           <div class="field"><label>دوران:</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
         </div>
 
-        <h4>4. مسجل ومغيّر الصوت (Voice Pitch)</h4>
+        <h4>4. الإيماءات والمستودع</h4>
+        <button onclick="document.getElementById('gesture-files').click()">➕ إيماءة متتالية جديدة</button>
+        <input type="file" id="gesture-files" accept="image/*" multiple style="display:none;" onchange="createMultiFrameGesture(event)">
+        
+        <div id="gesture-speed-container" style="display:none; flex-direction:column; gap:4px;">
+          <div class="field"><label>سرعة الإيماءة (FPS):</label><input type="range" id="gestureFps" min="1" max="30" value="10" oninput="updateGestureSpeed()"></div>
+        </div>
+        <div class="gesture-list" id="gestureList"></div>
+
+        <h4>5. مسجل ومغيّر الصوت (Voice Pitch)</h4>
         <div style="display:flex; flex-direction:column; gap:6px;">
           <button id="btn-record-audio" onclick="toggleAudioRecording()">🎙️ بدء التسجيل الصوتي</button>
           <div class="field">
             <label>طبقة الصوت (Pitch):</label>
-            <input type="range" id="pitchSlider" min="0.5" max="2.0" step="0.05" value="1.0">
+            <input type="range" id="pitchSlider" min="0.5" max="2.0" step="0.05" value="1.0" oninput="updateAudioSettings()">
           </div>
           <div class="field">
             <label>إضافة صدى (Echo):</label>
-            <input type="checkbox" id="echoCheck">
+            <input type="checkbox" id="echoCheck" onchange="updateAudioSettings()">
           </div>
           <button onclick="playProcessedAudio()" id="btn-play-audio" disabled>🔊 تشغيل الصوت المعدل</button>
         </div>
@@ -120,8 +133,8 @@
 
     let isInteracting = false;
     let drawStartPos = null;
+    let currentMousePos = { x: 0, y: 0 };
 
-    // --- Audio Variables ---
     let audioCtx = null;
     let mediaRecorder = null;
     let audioChunks = [];
@@ -132,21 +145,23 @@
       constructor(id, parentId, x, y, length, angle) {
         this.id = id;
         this.parentId = parentId;
-        this.x = x; 
+        this.x = x; // إحداثي نسبى للأصل أو الأب
         this.y = y;
         this.length = length;
-        this.angle = angle; 
+        this.angle = angle; // زاوية نسبية
 
         this.worldX = 0;
         this.worldY = 0;
         this.worldAngle = 0;
 
         this.baseImage = null;
+        this.gestures = [];
+        this.activeGestureId = null;
+
         this.imgTransform = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, rotation: 0 };
       }
     }
 
-    // --- 1. Library & Autosave Engine ---
     async function loadLibrary() {
       try {
         const res = await fetch('./res/list.json');
@@ -171,6 +186,7 @@
       const img = new Image();
       img.onload = () => {
         bone.baseImage = img;
+        bone.activeGestureId = null;
         syncPanelUI();
         autoSaveProject();
         render();
@@ -212,7 +228,6 @@
       render();
     }
 
-    // --- 2. Voice Pitch modification ---
     async function toggleAudioRecording() {
       const btn = document.getElementById('btn-record-audio');
       if (!isRecordingAudio) {
@@ -247,7 +262,9 @@
 
       const source = audioCtx.createBufferSource();
       source.buffer = audioBuffer;
-      source.playbackRate.value = parseFloat(document.getElementById('pitchSlider').value);
+
+      const pitchValue = parseFloat(document.getElementById('pitchSlider').value);
+      source.playbackRate.value = pitchValue;
 
       if (document.getElementById('echoCheck').checked) {
         const delay = audioCtx.createDelay();
@@ -265,7 +282,16 @@
       source.start(0);
     }
 
-    // --- 3. Bone Drawing & Pose Interactive Engine ---
+    function updateAudioSettings() {
+      autoSaveProject();
+    }
+
+    function toggleBoneVisibility() {
+      showBones = !showBones;
+      document.getElementById('btn-toggle-bones').innerText = showBones ? "👁️ إخفاء الهيكل" : "👁️ إظهار الهيكل";
+      render();
+    }
+
     function setMode(newMode) {
       mode = newMode;
       document.querySelectorAll('header button').forEach(b => {
@@ -276,6 +302,7 @@
       render();
     }
 
+    // نظام حساب الهيكل العظمي الهرمي الأصلي (Hierarchical Forward Kinematics)
     function updateTransforms() {
       bones.forEach(bone => {
         if (!bone.parentId) {
@@ -285,9 +312,13 @@
         } else {
           const parent = bones.find(b => b.id === bone.parentId);
           if (parent) {
-            const rad = (parent.worldAngle * Math.PI) / 180;
-            bone.worldX = parent.worldX + Math.cos(rad) * parent.length + bone.x;
-            bone.worldY = parent.worldY + Math.sin(rad) * parent.length + bone.y;
+            // إيجاد مفصل النهاية للأب بدقة لتبدأ منه العظمة الابنة تلقائياً
+            const parentRad = (parent.worldAngle * Math.PI) / 180;
+            const parentEndX = parent.worldX + Math.cos(parentRad) * parent.length;
+            const parentEndY = parent.worldY + Math.sin(parentRad) * parent.length;
+
+            bone.worldX = parentEndX;
+            bone.worldY = parentEndY;
             bone.worldAngle = parent.worldAngle + bone.angle;
           }
         }
@@ -300,21 +331,28 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawGrid();
 
-      // رسم الصور على العظام
       bones.forEach(bone => {
-        if (bone.baseImage) {
+        let activeImageToDraw = bone.baseImage;
+        if (bone.activeGestureId) {
+          const gesture = bone.gestures.find(g => g.id === bone.activeGestureId);
+          if (gesture && gesture.frames.length > 0) {
+            const frameIdx = Math.floor((currentFrame * (gesture.fps / 15))) % gesture.frames.length;
+            activeImageToDraw = gesture.frames[frameIdx];
+          }
+        }
+
+        if (activeImageToDraw) {
           ctx.save();
           ctx.translate(bone.worldX, bone.worldY);
           ctx.rotate((bone.worldAngle * Math.PI) / 180);
           ctx.translate(bone.imgTransform.offsetX, bone.imgTransform.offsetY);
           ctx.rotate((bone.imgTransform.rotation * Math.PI) / 180);
           ctx.scale(bone.imgTransform.scaleX, bone.imgTransform.scaleY);
-          ctx.drawImage(bone.baseImage, 0, -bone.baseImage.height / 2);
+          ctx.drawImage(activeImageToDraw, 0, -activeImageToDraw.height / 2);
           ctx.restore();
         }
       });
 
-      // رسم الهيكل المكون من العظام والمفاصل
       if (showBones && !isExporting) {
         bones.forEach(bone => {
           const rad = (bone.worldAngle * Math.PI) / 180;
@@ -331,14 +369,18 @@
           ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2);
           ctx.fillStyle = isSelected ? '#60a5fa' : '#38bdf8'; ctx.fill();
         });
-      }
 
-      // رسم خط معاينة العظمة أثناء سحب الماوس في وضع Draw
-      if (mode === 'draw' && isInteracting && drawStartPos) {
-        ctx.beginPath();
-        ctx.moveTo(drawStartPos.startX, drawStartPos.startY);
-        ctx.lineTo(drawStartPos.currX, drawStartPos.currY);
-        ctx.lineWidth = 3; ctx.strokeStyle = '#22c55e'; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+        // معاينة خط الرسم عند السحب في وضع الرسم (Draw Mode)
+        if (mode === 'draw' && isInteracting && drawStartPos) {
+          ctx.beginPath();
+          ctx.moveTo(drawStartPos.x, drawStartPos.y);
+          ctx.lineTo(currentMousePos.x, currentMousePos.y);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#22c55e';
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
     }
 
@@ -353,33 +395,38 @@
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
-    // --- أحداث الماوس المحدثة بالكامل لرسم الهيكل ---
     canvas.addEventListener('mousedown', (e) => {
       const pos = getMousePos(e);
       isInteracting = true;
+      currentMousePos = pos;
 
       if (mode === 'draw') {
-        let parentBone = null;
-        // التحقق مما إذا كنا نبدأ الرسم من نهاية/مفصل عظمة سابقة لربطها بها
+        let parentBoneId = null;
+        let startX = pos.x;
+        let startY = pos.y;
+
+        // البحث عما إذا كان الضغط يبدأ من مفصل أو نهاية عظمة موجودة لربطها بمهارة
         for (let bone of bones) {
           const rad = (bone.worldAngle * Math.PI) / 180;
           const endX = bone.worldX + Math.cos(rad) * bone.length;
           const endY = bone.worldY + Math.sin(rad) * bone.length;
-          if (Math.hypot(pos.x - endX, pos.y - endY) < 20) {
-            parentBone = bone;
+          
+          if (Math.hypot(pos.x - endX, pos.y - endY) < 15) {
+            parentBoneId = bone.id;
+            startX = endX;
+            startY = endY;
+            break;
+          } else if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 15 && !bone.parentId) {
+            // السماح بإنشاء عظمة فرعية أخرى من الجذر الرئيسي إذا لزم الأمر
+            parentBoneId = null;
+            startX = bone.worldX;
+            startY = bone.worldY;
             break;
           }
         }
 
-        drawStartPos = {
-          parentId: parentBone ? parentBone.id : null,
-          startX: parentBone ? (parentBone.worldX + Math.cos((parentBone.worldAngle * Math.PI) / 180) * parentBone.length) : pos.x,
-          startY: parentBone ? (parentBone.worldY + Math.sin((parentBone.worldAngle * Math.PI) / 180) * parentBone.length) : pos.y,
-          currX: pos.x,
-          currY: pos.y
-        };
+        drawStartPos = { parentId: parentBoneId, x: startX, y: startY };
       } else {
-        // نمط الحركة Pose أو Texture
         selectedBoneId = null;
         for (let bone of bones) {
           if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 25) {
@@ -393,77 +440,67 @@
     });
 
     canvas.addEventListener('mousemove', (e) => {
-      if (!isInteracting) return;
       const pos = getMousePos(e);
+      currentMousePos = pos;
+      if (!isInteracting) return;
 
-      if (mode === 'draw' && drawStartPos) {
-        drawStartPos.currX = pos.x;
-        drawStartPos.currY = pos.y;
-      } else if (mode === 'pose' && selectedBoneId) {
+      if (mode === 'pose' && selectedBoneId) {
         const bone = bones.find(b => b.id === selectedBoneId);
         if (bone) {
           if (!bone.parentId) {
             bone.x = pos.x; bone.y = pos.y;
           } else {
+            // تدوير العظمة بناءً على حركة الماوس حول مفصلها الأب
             const parent = bones.find(b => b.id === bone.parentId);
-            const dx = pos.x - parent.worldX;
-            const dy = pos.y - parent.worldY;
-            bone.angle = (Math.atan2(dy, dx) * 180 / Math.PI) - parent.worldAngle;
+            if (parent) {
+              const dx = pos.x - parent.worldX;
+              const dy = pos.y - parent.worldY;
+              const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+              bone.angle = targetAngle - parent.worldAngle;
+            }
           }
-          autoSaveProject();
         }
+        autoSaveProject();
       }
       render();
     });
 
-    canvas.addEventListener('mouseup', () => {
-      if (mode === 'draw' && isInteracting && drawStartPos) {
-        const dx = drawStartPos.currX - drawStartPos.startX;
-        const dy = drawStartPos.currY - drawStartPos.startY;
-        const length = Math.hypot(dx, dy);
+    canvas.addEventListener('mouseup', (e) => {
+      if (!isInteracting) return;
+      const pos = getMousePos(e);
 
-        // إنشاء عظمة فقط إذا سحب المستخدم الماوس مسافة كافية (> 15 بكسل)
-        if (length > 15) {
-          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-          const newBoneId = 'b_' + Date.now();
-          
+      if (mode === 'draw' && drawStartPos) {
+        const dx = pos.x - drawStartPos.x;
+        const dy = pos.y - drawStartPos.y;
+        const length = Math.hypot(dx, dy);
+        
+        if (length > 5) {
+          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
           let localAngle = angle;
-          let localX = drawStartPos.startX;
-          let localY = drawStartPos.startY;
 
           if (drawStartPos.parentId) {
-            const parent = bones.find(b => b.id === drawStartPos.parentId);
-            localAngle = angle - parent.worldAngle;
-            localX = 0;
-            localY = 0;
+            const pb = bones.find(b => b.id === drawStartPos.parentId);
+            localAngle = angle - pb.worldAngle;
           }
 
-          const newBone = new Bone(newBoneId, drawStartPos.parentId, localX, localY, length, localAngle);
+          const newBone = new Bone(
+            'bone_' + Date.now(),
+            drawStartPos.parentId,
+            drawStartPos.x, drawStartPos.y,
+            length,
+            localAngle
+          );
           bones.push(newBone);
-          selectedBoneId = newBoneId;
-          syncPanelUI();
+          selectedBoneId = newBone.id;
           autoSaveProject();
+          syncPanelUI();
         }
+        drawStartPos = null;
       }
+
       isInteracting = false;
-      drawStartPos = null;
       render();
     });
-
-    // --- باقي أدوات الواجهة وتدفق الملحقات ---
-    function toggleBoneVisibility() {
-      showBones = !showBones;
-      document.getElementById('btn-toggle-bones').innerText = showBones ? "👁️ إخفاء الهيكل" : "👁️ إظهار الهيكل";
-      render();
-    }
-
-    function deleteSelectedBone() {
-      if (!selectedBoneId) return;
-      bones = bones.filter(b => b.id !== selectedBoneId && b.parentId !== selectedBoneId);
-      selectedBoneId = null;
-      autoSaveProject();
-      render();
-    }
 
     function uploadBoneImage(e) {
       const file = e.target.files[0];
@@ -487,6 +524,14 @@
       document.getElementById('texOffX').value = bone.imgTransform.offsetX;
       document.getElementById('texOffY').value = bone.imgTransform.offsetY;
       document.getElementById('texRot').value = bone.imgTransform.rotation;
+    }
+
+    function deleteSelectedBone() {
+      if (!selectedBoneId) return;
+      bones = bones.filter(b => b.id !== selectedBoneId && b.parentId !== selectedBoneId);
+      selectedBoneId = null;
+      autoSaveProject();
+      render();
     }
 
     function updateTex() {
