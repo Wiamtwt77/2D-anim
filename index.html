@@ -2,99 +2,92 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>2D Skeleton & Gesture Studio</title>
+  <title>Twencraft Upload Studio - Pro Animation</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-    header { background: #1a1b23; padding: 10px 16px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; z-index: 10; flex-wrap: wrap; gap: 8px; }
+    header { background: #1a1b23; padding: 12px 20px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; z-index: 10; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     .tool-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     
-    button { background: #2a2c37; border: 1px solid #3d4050; color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
-    button:hover { background: #373a4a; }
-    button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; }
+    button { background: #2a2c37; border: 1px solid #3d4050; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+    button:hover { background: #373a4a; transform: translateY(-1px); }
+    button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.3); }
     button.accent { background: #8b5cf6; border-color: #a78bfa; }
     button.danger { background: #ef4444; border-color: #f87171; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
-    .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; }
-    canvas { background: #14151c; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: crosshair; }
+    .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 20px; }
+    canvas { background: #14151c; border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); cursor: crosshair; }
 
-    .context-panel { position: absolute; top: 15px; right: 15px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 14px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 10px; width: 300px; max-height: calc(100% - 30px); overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 20; }
-    .context-panel h4 { font-size: 12px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 4px; margin-top: 4px; }
+    .context-panel { position: absolute; top: 20px; right: 20px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 16px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 12px; width: 320px; max-height: calc(100% - 40px); overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 20; }
+    .context-panel h4 { font-size: 13px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 6px; margin-top: 6px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
-    .field input[type="range"] { width: 110px; }
-    .field input[type="number"] { width: 55px; background: #111217; border: 1px solid #3d4050; color: #fff; padding: 2px 4px; border-radius: 4px; text-align: center; }
+    .field input[type="range"] { width: 120px; cursor: pointer; }
+    .field input[type="number"] { width: 60px; background: #111217; border: 1px solid #3d4050; color: #fff; padding: 4px; border-radius: 4px; text-align: center; }
 
-    .gesture-list { display: flex; flex-direction: column; gap: 8px; max-height: 120px; overflow-y: auto; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d; }
-    
-    .timeline { height: 130px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
-    .timeline-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-    .track { position: relative; height: 32px; background: #0f1015; border: 1px solid #2e313d; border-radius: 6px; cursor: pointer; }
-    .scrubber { position: absolute; top: 0; width: 3px; height: 100%; background: #ef4444; pointer-events: none; z-index: 5; }
-    .kf-node { position: absolute; top: 50%; width: 12px; height: 12px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 8px #3b82f6; z-index: 4; }
+    .timeline { height: 140px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 12px 24px; display: flex; flex-direction: column; gap: 12px; z-index: 10; }
+    .timeline-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .track { position: relative; height: 36px; background: #0f1015; border: 1px solid #2e313d; border-radius: 6px; cursor: pointer; overflow: hidden; }
+    .scrubber { position: absolute; top: 0; width: 3px; height: 100%; background: #ef4444; pointer-events: none; z-index: 5; box-shadow: 0 0 8px #ef4444; }
+    .kf-node { position: absolute; top: 50%; width: 14px; height: 14px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 10px #3b82f6; z-index: 4; transition: transform 0.1s; }
+    .kf-node:hover { transform: translate(-50%, -50%) scale(1.3); }
   </style>
 </head>
 <body>
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك</button>
-      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم الهيكل</button>
-      <button id="btn-toggle-bones" onclick="toggleBoneVisibility()">👁️ الهيكل</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك الجسد</button>
+      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 بناء الهيكل</button>
+      <button id="btn-toggle-bones" onclick="toggleBoneVisibility()">👁️ إخفاء/إظهار العظام</button>
     </div>
     
-    <div class="tool-group" style="background:#111217; padding:4px 10px; border-radius:6px; border:1px solid #2e313d;">
-      <span style="font-size:11px; color:#94a3b8;">عرض الكانفاس:</span>
-      <input type="number" id="canvas-width-input" value="200" min="50" max="2000" onchange="resizeCanvasDimensions()">
-      <span style="font-size:11px; color:#94a3b8;">ارتفاع الكانفاس:</span>
-      <input type="number" id="canvas-height-input" value="200" min="50" max="2000" onchange="resizeCanvasDimensions()">
+    <div class="tool-group" style="background:#111217; padding:6px 12px; border-radius:6px; border:1px solid #2e313d;">
+      <span style="font-size:12px; color:#94a3b8;">العرض:</span>
+      <input type="number" id="canvas-width-input" value="800" step="50" min="100" max="3000" onchange="resizeCanvasDimensions()">
+      <span style="font-size:12px; color:#94a3b8; margin-right:8px;">الطول:</span>
+      <input type="number" id="canvas-height-input" value="600" step="50" min="100" max="3000" onchange="resizeCanvasDimensions()">
+      
+      <button onclick="document.getElementById('bg-file').click()" style="margin-right:12px; padding:4px 8px; font-size:11px;">🖼️ خلفية</button>
+      <input type="file" id="bg-file" accept="image/*" style="display:none;" onchange="uploadBackground(event)">
     </div>
 
     <div class="tool-group">
-      <button class="accent" onclick="exportVideo()">🎬 فيديو</button>
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف عظمة</button>
-      <button class="danger" onclick="clearAll()">💥 مسح</button>
+      <button class="accent">🎬 تصدير</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
+      <button class="danger" onclick="clearAll()">💥 مسح المشروع</button>
     </div>
   </header>
 
   <div class="workspace">
     <div class="canvas-container">
-      <canvas id="stage" width="200" height="200"></canvas>
+      <canvas id="stage" width="800" height="600"></canvas>
 
       <div class="context-panel" id="side-panel">
-        <h3 id="panel-title" style="font-size:14px; color:#f8fafc;">اختر عظمة للتعديل</h3>
+        <h3 id="panel-title" style="font-size:15px; color:#f8fafc; font-weight:bold;">إعدادات العظمة</h3>
         
         <h4>1. مكتبة الموارد السريعة</h4>
         <div id="res-library" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d;">
           <span style="font-size:10px; color:#64748b;">جاري التحميل...</span>
         </div>
 
-        <h4>2. استيراد صورة مستقلة</h4>
-        <button onclick="document.getElementById('bone-img-file').click()">🖼️ رفع صورة ملف خاص</button>
-        <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
-
-        <h4>3. أدوات تكييف وتحجيم الصورة (افتراضياً صغير)</h4>
-        <div id="tex-controls" style="display:flex; flex-direction:column; gap:6px;">
-          <div class="field"><label>مط X:</label><input type="range" id="texScaleX" min="0.05" max="3" step="0.02" value="0.3" oninput="updateTex()"></div>
-          <div class="field"><label>مط Y:</label><input type="range" id="texScaleY" min="0.05" max="3" step="0.02" value="0.3" oninput="updateTex()"></div>
-          <div class="field"><label>إزاحة X:</label><input type="range" id="texOffX" min="-150" max="150" value="0" oninput="updateTex()"></div>
-          <div class="field"><label>إزاحة Y:</label><input type="range" id="texOffY" min="-150" max="150" value="0" oninput="updateTex()"></div>
-          <div class="field"><label>دوران:</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
+        <h4>2. الحركات والوضعيات الجاهزة</h4>
+        <div id="anim-library" style="display: flex; flex-direction: column; gap: 4px; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d;">
+          <span style="font-size:10px; color:#64748b;">جاري تحميل الحركات...</span>
         </div>
 
-        <h4>4. مسجل ومغيّر الصوت (Voice Pitch)</h4>
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <button id="btn-record-audio" onclick="toggleAudioRecording()">🎙️ بدء التسجيل الصوتي</button>
-          <div class="field">
-            <label>طبقة الصوت (Pitch):</label>
-            <input type="range" id="pitchSlider" min="0.5" max="2.0" step="0.05" value="1.0" oninput="updateAudioSettings()">
-          </div>
-          <div class="field">
-            <label>إضافة صدى (Echo):</label>
-            <input type="checkbox" id="echoCheck" onchange="updateAudioSettings()">
-          </div>
-          <button onclick="playProcessedAudio()" id="btn-play-audio" disabled>🔊 تشغيل الصوت المعدل</button>
+        <h4>3. استيراد صورة مستقلة</h4>
+        <button onclick="document.getElementById('bone-img-file').click()" style="width:100%;">📁 رفع صورة للجزء المحدد</button>
+        <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
+
+        <h4>4. تعديل مقاسات الصورة</h4>
+        <div id="tex-controls" style="display:flex; flex-direction:column; gap:8px;">
+          <div class="field"><label>تكبير X:</label><input type="range" id="texScaleX" min="0.1" max="5" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>تكبير Y:</label><input type="range" id="texScaleY" min="0.1" max="5" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة أفقية:</label><input type="range" id="texOffX" min="-300" max="300" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة عمودية:</label><input type="range" id="texOffY" min="-300" max="300" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>تدوير (زاوية):</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
         </div>
       </div>
     </div>
@@ -103,13 +96,13 @@
   <div class="timeline">
     <div class="timeline-controls">
       <div class="tool-group">
-        <button id="btn-play" onclick="togglePlay()">▶ تشغيل الحركة</button>
-        <button onclick="saveKeyframe()">➕ حفظ كيفريم</button>
-        <button class="danger" onclick="deleteKeyframe()">🗑️ حذف كيفريم</button>
+        <button id="btn-play" onclick="togglePlay()" class="active">▶ تشغيل الأنيميشن</button>
+        <button onclick="saveKeyframe()" style="background:#059669; border-color:#10b981;">➕ حفظ اللقطة (Keyframe)</button>
+        <button class="danger" onclick="deleteKeyframe()">🗑️ حذف اللقطة</button>
       </div>
-      <span style="font-size: 13px;">الإطار الحالي: <b id="lbl-frame" style="color:#60a5fa;">0</b> / 100</span>
+      <span style="font-size: 14px; font-weight:bold;">الإطار: <b id="lbl-frame" style="color:#60a5fa; font-size:16px;">0</b> / 100</span>
     </div>
-    <div class="track" id="timeline-track" onclick="scrubTimeline(event)">
+    <div class="track" id="timeline-track" onmousedown="startScrubbing(event)">
       <div class="scrubber" id="scrubber-line" style="left: 0%;"></div>
     </div>
   </div>
@@ -126,17 +119,15 @@
     let keyframes = [];
     let animTimer = null;
     let showBones = true;
-    let isExporting = false;
+
+    let bgImage = null; 
+    let bgImageSrc = null;
 
     let isInteracting = false;
+    let isScrubbing = false;
     let drawStartPos = null;
     let currentMousePos = { x: 0, y: 0 };
-
-    let audioCtx = null;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let audioBuffer = null;
-    let isRecordingAudio = false;
+    let snapIndicator = null;
 
     class Bone {
       constructor(id, parentId, x, y, length, angle) {
@@ -150,32 +141,19 @@
         this.worldX = 0;
         this.worldY = 0;
         this.worldAngle = 0;
+        this._updated = false;
 
         this.baseImage = null;
-        this.gestures = [];
-        this.activeGestureId = null;
-
-        // اجعل المقاس الافتراضي للصورة أصغر بكثير (0.3 بدلاً من 1) لتلائم المساحات المصغرة كـ 200×200
-        this.imgTransform = { scaleX: 0.3, scaleY: 0.3, offsetX: 0, offsetY: 0, rotation: 0 };
+        this.imgTransform = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, rotation: 0 };
       }
     }
 
-    // --- دالة تحجيم وتغيير أبعاد مساحة العمل الفعلية (الكانفاس) ---
-    function resizeCanvasDimensions() {
-      const w = parseInt(document.getElementById('canvas-width-input').value) || 200;
-      const h = parseInt(document.getElementById('canvas-height-input').value) || 200;
-      canvas.width = w;
-      canvas.height = h;
-      autoSaveProject();
-      render();
-    }
-
+    // جلب ملفات الموارد والصور
     async function loadLibrary() {
       try {
         const res = await fetch('./res/list.json');
         const items = await res.json();
         const box = document.getElementById('res-library');
-        
         box.innerHTML = items.map(item => `
           <div onclick="applyLibraryImg('${item.src}')" style="background:#1e202a; border:1px solid #2e313d; padding:4px; border-radius:4px; text-align:center; cursor:pointer;">
             <img src="${item.src}" style="width:100%; height:36px; object-fit:contain;" />
@@ -183,193 +161,172 @@
           </div>
         `).join('');
       } catch (e) {
-        document.getElementById('res-library').innerHTML = '<span style="font-size:10px; color:#ef4444;">لم يتوفر list.json</span>';
+        document.getElementById('res-library').innerHTML = '<span style="font-size:10px; color:#ef4444;">تعذر تحميل res/list.json</span>';
+      }
+    }
+
+    // جلب قائمة الحركات الخارجية من المجلد animations/
+    async function loadAnimationLibrary() {
+      const anims = [
+        { name: "وضعيات الاسترخاء", file: "animations/idle.json" },
+        { name: "حركة المشي", file: "animations/walk.json" },
+        { name: "تلويح باليد", file: "animations/wave.json" }
+      ];
+      
+      const box = document.getElementById('anim-library');
+      box.innerHTML = anims.map(anim => `
+        <button onclick="applyExternalAnimation('${anim.file}')" style="width:100%; text-align:right; font-size:11px; padding:6px; background:#1e202a; border-color:#2e313d;">
+          🎬 ${anim.name}
+        </button>
+      `).join('');
+    }
+
+    // تطبيق الحركة الخارجية وقراءة إطاراتها في الـ Timeline
+    async function applyExternalAnimation(filePath) {
+      try {
+        const response = await fetch(filePath);
+        const animData = await response.json();
+        if (animData && animData.keyframes) {
+          // دمج أو استبدال الكيفريمز بالحركة الجديدة
+          keyframes = animData.keyframes;
+          renderTimelineTrack();
+          evaluateFrame(currentFrame);
+          render();
+          alert(`تم تطبيق (${animData.name}) بنجاح!`);
+        }
+      } catch (e) {
+        alert("تنبيه: تأكد من تشغيل المشروع عبر سيرفر محلي (Live Server) كي يتمكن المتصفح من قراءة مجلد animations/");
       }
     }
 
     function applyLibraryImg(imgSrc) {
       const bone = bones.find(b => b.id === selectedBoneId);
-      if (!bone) { alert("اختر عظمة من المسرح أولاً لتركيب الشكل عليها!"); return; }
-      
+      if (!bone) { alert("اختر عظمة أولاً!"); return; }
       const img = new Image();
-      img.onload = () => {
-        bone.baseImage = img;
-        bone.activeGestureId = null;
-        syncPanelUI();
-        autoSaveProject();
-        render();
-      };
+      img.onload = () => { bone.baseImage = img; autoSaveProject(); render(); };
       img.src = imgSrc;
+    }
+
+    function resizeCanvasDimensions() {
+      canvas.width = parseInt(document.getElementById('canvas-width-input').value) || 800;
+      canvas.height = parseInt(document.getElementById('canvas-height-input').value) || 600;
+      autoSaveProject(); render();
+    }
+
+    function uploadBackground(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        bgImageSrc = ev.target.result;
+        const img = new Image();
+        img.onload = () => { bgImage = img; autoSaveProject(); render(); };
+        img.src = bgImageSrc;
+      };
+      reader.readAsDataURL(file);
     }
 
     function autoSaveProject() {
       const data = {
-        canvasWidth: canvas.width,
-        canvasHeight: canvas.height,
+        canvasWidth: canvas.width, canvasHeight: canvas.height,
+        bgImageSrc: bgImageSrc,
         bones: bones.map(b => ({
           id: b.id, parentId: b.parentId, x: b.x, y: b.y, length: b.length, angle: b.angle,
           imgTransform: b.imgTransform, imgSrc: b.baseImage ? b.baseImage.src : null
         })),
         keyframes: keyframes
       };
-      localStorage.setItem('twencraft_studio_save', JSON.stringify(data));
+      localStorage.setItem('twencraft_studio_save_v5', JSON.stringify(data));
     }
 
     function loadAutoSave() {
-      const saved = localStorage.getItem('twencraft_studio_save');
+      const saved = localStorage.getItem('twencraft_studio_save_v5');
       if (!saved) return;
       const data = JSON.parse(saved);
       keyframes = data.keyframes || [];
       
       if (data.canvasWidth && data.canvasHeight) {
-        canvas.width = data.canvasWidth;
-        canvas.height = data.canvasHeight;
+        canvas.width = data.canvasWidth; canvas.height = data.canvasHeight;
         document.getElementById('canvas-width-input').value = data.canvasWidth;
         document.getElementById('canvas-height-input').value = data.canvasHeight;
       }
+      
+      if (data.bgImageSrc) {
+        bgImageSrc = data.bgImageSrc;
+        const img = new Image(); img.onload = () => { bgImage = img; render(); }; img.src = bgImageSrc;
+      }
 
-      if (!data.bones || data.bones.length === 0) return;
-
+      if (!data.bones) return;
       bones = data.bones.map(bData => {
         const b = new Bone(bData.id, bData.parentId, bData.x, bData.y, bData.length, bData.angle);
         if (bData.imgTransform) b.imgTransform = bData.imgTransform;
         if (bData.imgSrc) {
-          const img = new Image();
-          img.onload = () => { render(); };
-          img.src = bData.imgSrc;
-          b.baseImage = img;
+          const img = new Image(); img.onload = () => render(); img.src = bData.imgSrc; b.baseImage = img;
         }
         return b;
       });
-      renderTimelineTrack();
-      render();
+      renderTimelineTrack(); render();
     }
 
-    async function toggleAudioRecording() {
-      const btn = document.getElementById('btn-record-audio');
-      if (!isRecordingAudio) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-        mediaRecorder.onstop = async () => {
-          const blob = new Blob(audioChunks, { type: 'audio/wav' });
-          const arrayBuffer = await blob.arrayBuffer();
-          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-          document.getElementById('btn-play-audio').disabled = false;
-        };
-
-        mediaRecorder.start();
-        isRecordingAudio = true;
-        btn.innerText = "🛑 إيقاف التسجيل";
-        btn.style.background = "#ef4444";
-      } else {
-        mediaRecorder.stop();
-        isRecordingAudio = false;
-        btn.innerText = "🎙️ بدء التسجيل الصوتي";
-        btn.style.background = "#2a2c37";
-      }
-    }
-
-    function playProcessedAudio() {
-      if (!audioBuffer) return;
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-
-      const pitchValue = parseFloat(document.getElementById('pitchSlider').value);
-      source.playbackRate.value = pitchValue;
-
-      if (document.getElementById('echoCheck').checked) {
-        const delay = audioCtx.createDelay();
-        delay.delayTime.value = 0.2;
-        const feedback = audioCtx.createGain();
-        feedback.gain.value = 0.4;
-
-        source.connect(delay);
-        delay.connect(feedback);
-        feedback.connect(delay);
-        delay.connect(audioCtx.destination);
-      }
-
-      source.connect(audioCtx.destination);
-      source.start(0);
-    }
-
-    function updateAudioSettings() {
-      autoSaveProject();
-    }
-
-    function toggleBoneVisibility() {
-      showBones = !showBones;
-      document.getElementById('btn-toggle-bones').innerText = showBones ? "👁️ الهيكل" : "👁️ مخفي";
-      render();
-    }
+    function toggleBoneVisibility() { showBones = !showBones; render(); }
 
     function setMode(newMode) {
       mode = newMode;
-      document.querySelectorAll('header button').forEach(b => {
-        if (b.id.startsWith('btn-mode-')) b.classList.remove('active');
-      });
-      const targetBtn = document.getElementById(`btn-mode-${newMode}`);
-      if (targetBtn) targetBtn.classList.add('active');
+      document.querySelectorAll('header button').forEach(b => { if (b.id.startsWith('btn-mode-')) b.classList.remove('active'); });
+      document.getElementById(`btn-mode-${newMode}`).classList.add('active');
       render();
     }
 
-    // نظام الهيكل الهرمي الأصلي السليم
-    function updateTransforms() {
-      bones.forEach(bone => {
-        if (!bone.parentId) {
-          bone.worldX = bone.x;
-          bone.worldY = bone.y;
-          bone.worldAngle = bone.angle;
-        } else {
-          const parent = bones.find(b => b.id === bone.parentId);
-          if (parent) {
-            const parentRad = (parent.worldAngle * Math.PI) / 180;
-            const parentEndX = parent.worldX + Math.cos(parentRad) * parent.length;
-            const parentEndY = parent.worldY + Math.sin(parentRad) * parent.length;
-
-            bone.worldX = parentEndX;
-            bone.worldY = parentEndY;
-            bone.worldAngle = parent.worldAngle + bone.angle;
-          }
+    function updateBoneWorld(bone) {
+      if (bone._updated) return;
+      if (bone.parentId) {
+        const parent = bones.find(b => b.id === bone.parentId);
+        if (parent) {
+          updateBoneWorld(parent);
+          const parentRad = (parent.worldAngle * Math.PI) / 180;
+          bone.worldX = parent.worldX + Math.cos(parentRad) * parent.length;
+          bone.worldY = parent.worldY + Math.sin(parentRad) * parent.length;
+          bone.worldAngle = parent.worldAngle + bone.angle;
         }
-      });
+      } else {
+        bone.worldX = bone.x;
+        bone.worldY = bone.y;
+        bone.worldAngle = bone.angle;
+      }
+      bone._updated = true;
+    }
+
+    function updateTransforms() {
+      bones.forEach(b => b._updated = false);
+      bones.forEach(b => updateBoneWorld(b));
     }
 
     function render() {
-      if (!isInteracting) evaluateFrame(currentFrame);
+      if (!isInteracting && isPlaying) evaluateFrame(currentFrame);
       updateTransforms();
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawGrid();
+      
+      if (bgImage) {
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        drawGrid(); 
+      }
 
       bones.forEach(bone => {
-        let activeImageToDraw = bone.baseImage;
-        if (bone.activeGestureId) {
-          const gesture = bone.gestures.find(g => g.id === bone.activeGestureId);
-          if (gesture && gesture.frames.length > 0) {
-            const frameIdx = Math.floor((currentFrame * (gesture.fps / 15))) % gesture.frames.length;
-            activeImageToDraw = gesture.frames[frameIdx];
-          }
-        }
-
-        if (activeImageToDraw) {
+        if (bone.baseImage) {
           ctx.save();
           ctx.translate(bone.worldX, bone.worldY);
           ctx.rotate((bone.worldAngle * Math.PI) / 180);
           ctx.translate(bone.imgTransform.offsetX, bone.imgTransform.offsetY);
           ctx.rotate((bone.imgTransform.rotation * Math.PI) / 180);
           ctx.scale(bone.imgTransform.scaleX, bone.imgTransform.scaleY);
-          ctx.drawImage(activeImageToDraw, 0, -activeImageToDraw.height / 2);
+          ctx.drawImage(bone.baseImage, 0, -bone.baseImage.height / 2);
           ctx.restore();
         }
       });
 
-      if (showBones && !isExporting) {
+      if (showBones) {
         bones.forEach(bone => {
           const rad = (bone.worldAngle * Math.PI) / 180;
           const endX = bone.worldX + Math.cos(rad) * bone.length;
@@ -377,74 +334,108 @@
           const isSelected = bone.id === selectedBoneId;
 
           ctx.beginPath(); ctx.moveTo(bone.worldX, bone.worldY); ctx.lineTo(endX, endY);
-          ctx.lineWidth = isSelected ? 4 : 2; ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8'; ctx.stroke();
-
-          ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 5, 0, Math.PI * 2);
+          ctx.lineWidth = isSelected ? 5 : 3; ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8'; ctx.stroke();
+          
+          ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 6, 0, Math.PI * 2);
           ctx.fillStyle = !bone.parentId ? '#ef4444' : '#ffffff'; ctx.fill(); ctx.stroke();
-
-          ctx.beginPath(); ctx.arc(endX, endY, 4, 0, Math.PI * 2);
+          
+          ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2);
           ctx.fillStyle = isSelected ? '#60a5fa' : '#38bdf8'; ctx.fill();
         });
 
-        if (mode === 'draw' && isInteracting && drawStartPos) {
-          ctx.beginPath();
-          ctx.moveTo(drawStartPos.x, drawStartPos.y);
-          ctx.lineTo(currentMousePos.x, currentMousePos.y);
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = '#22c55e';
-          ctx.setLineDash([3, 3]);
-          ctx.stroke();
-          ctx.setLineDash([]);
+        if (mode === 'draw' && snapIndicator) {
+          ctx.beginPath(); ctx.arc(snapIndicator.x, snapIndicator.y, 10, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.4)'; ctx.fill();
+          ctx.lineWidth = 2; ctx.strokeStyle = '#10b981'; ctx.stroke();
+        }
+
+        if (mode === 'draw' && drawStartPos) {
+          ctx.beginPath(); ctx.moveTo(drawStartPos.x, drawStartPos.y); ctx.lineTo(currentMousePos.x, currentMousePos.y);
+          ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)'; ctx.stroke();
         }
       }
     }
 
     function drawGrid() {
       ctx.strokeStyle = '#1a1c24'; ctx.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-      for (let y = 0; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+      for (let x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+      for (let y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
     }
 
     function getMousePos(e) {
       const rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
     }
 
-    canvas.addEventListener('mousedown', (e) => {
-      const pos = getMousePos(e);
-      isInteracting = true;
-      currentMousePos = pos;
-
-      if (mode === 'draw') {
-        let parentBoneId = null;
-        let startX = pos.x;
-        let startY = pos.y;
-
-        for (let bone of bones) {
-          const rad = (bone.worldAngle * Math.PI) / 180;
-          const endX = bone.worldX + Math.cos(rad) * bone.length;
-          const endY = bone.worldY + Math.sin(rad) * bone.length;
-          
-          if (Math.hypot(pos.x - endX, pos.y - endY) < 15) {
-            parentBoneId = bone.id;
-            startX = endX;
-            startY = endY;
-            break;
-          } else if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 15 && !bone.parentId) {
-            parentBoneId = null;
-            startX = bone.worldX;
-            startY = bone.worldY;
-            break;
-          }
+    function findSnapPoint(pos) {
+      let snapRadius = 30; 
+      for (let bone of bones) {
+        const rad = (bone.worldAngle * Math.PI) / 180;
+        const endX = bone.worldX + Math.cos(rad) * bone.length;
+        const endY = bone.worldY + Math.sin(rad) * bone.length;
+        
+        if (Math.hypot(pos.x - endX, pos.y - endY) < snapRadius) {
+          return { parentId: bone.id, x: endX, y: endY };
         }
+        if (!bone.parentId && Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < snapRadius) {
+          return { parentId: null, x: bone.worldX, y: bone.worldY, targetIsRoot: true };
+        }
+      }
+      return null;
+    }
 
-        drawStartPos = { parentId: parentBoneId, x: startX, y: startY };
+    canvas.addEventListener('mousemove', (e) => {
+      currentMousePos = getMousePos(e);
+      
+      if (mode === 'draw' && !isInteracting) {
+        snapIndicator = findSnapPoint(currentMousePos);
+      } else {
+        snapIndicator = null;
+      }
+
+      if (isInteracting && mode === 'pose' && selectedBoneId) {
+        const bone = bones.find(b => b.id === selectedBoneId);
+        if (bone) {
+          if (!bone.parentId) { 
+            bone.x = currentMousePos.x; bone.y = currentMousePos.y; 
+          } else {
+            const parent = bones.find(b => b.id === bone.parentId);
+            if (parent) {
+              updateTransforms(); 
+              const dx = currentMousePos.x - bone.worldX;
+              const dy = currentMousePos.y - bone.worldY;
+              bone.angle = (Math.atan2(dy, dx) * (180 / Math.PI)) - parent.worldAngle; 
+            }
+          }
+          autoUpdateCurrentKeyframe(bone); 
+        }
+      }
+      render();
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      currentMousePos = getMousePos(e);
+      isInteracting = true;
+      
+      if (mode === 'draw') {
+        const snap = findSnapPoint(currentMousePos);
+        if (snap) {
+          drawStartPos = { parentId: snap.targetIsRoot ? null : snap.parentId, x: snap.x, y: snap.y };
+        } else {
+          drawStartPos = { parentId: null, x: currentMousePos.x, y: currentMousePos.y };
+        }
       } else {
         selectedBoneId = null;
         for (let bone of bones) {
-          if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 20) {
-            selectedBoneId = bone.id;
-            break;
+          const rad = (bone.worldAngle * Math.PI) / 180;
+          const midX = bone.worldX + (Math.cos(rad) * bone.length)/2;
+          const midY = bone.worldY + (Math.sin(rad) * bone.length)/2;
+          
+          if (Math.hypot(currentMousePos.x - bone.worldX, currentMousePos.y - bone.worldY) < 20 ||
+              Math.hypot(currentMousePos.x - midX, currentMousePos.y - midY) < (bone.length/2)) { 
+            selectedBoneId = bone.id; break; 
           }
         }
         syncPanelUI();
@@ -452,110 +443,76 @@
       render();
     });
 
-    canvas.addEventListener('mousemove', (e) => {
-      const pos = getMousePos(e);
-      currentMousePos = pos;
+    canvas.addEventListener('mouseup', () => {
       if (!isInteracting) return;
-
-      if (mode === 'pose' && selectedBoneId) {
-        const bone = bones.find(b => b.id === selectedBoneId);
-        if (bone) {
-          if (!bone.parentId) {
-            bone.x = pos.x; bone.y = pos.y;
-          } else {
-            const parent = bones.find(b => b.id === bone.parentId);
-            if (parent) {
-              const dx = pos.x - parent.worldX;
-              const dy = pos.y - parent.worldY;
-              const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-              bone.angle = targetAngle - parent.worldAngle;
-            }
-          }
-        }
-        autoSaveProject();
-      }
-      render();
-    });
-
-    canvas.addEventListener('mouseup', (e) => {
-      if (!isInteracting) return;
-      const pos = getMousePos(e);
-
       if (mode === 'draw' && drawStartPos) {
-        const dx = pos.x - drawStartPos.x;
-        const dy = pos.y - drawStartPos.y;
+        const dx = currentMousePos.x - drawStartPos.x; 
+        const dy = currentMousePos.y - drawStartPos.y; 
         const length = Math.hypot(dx, dy);
-        
-        if (length > 4) {
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-          let localAngle = angle;
-
-          if (drawStartPos.parentId) {
-            const pb = bones.find(b => b.id === drawStartPos.parentId);
-            localAngle = angle - pb.worldAngle;
+        if (length > 10) { 
+          let localAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+          if (drawStartPos.parentId) { 
+            const pb = bones.find(b => b.id === drawStartPos.parentId); 
+            localAngle -= pb.worldAngle; 
           }
-
-          const newBone = new Bone(
-            'bone_' + Date.now(),
-            drawStartPos.parentId,
-            drawStartPos.x, drawStartPos.y,
-            length,
-            localAngle
-          );
-          bones.push(newBone);
-          selectedBoneId = newBone.id;
-          autoSaveProject();
-          syncPanelUI();
+          const newBone = new Bone('bone_' + Date.now(), drawStartPos.parentId, drawStartPos.x, drawStartPos.y, length, localAngle);
+          bones.push(newBone); 
+          selectedBoneId = newBone.id; 
+          autoSaveProject(); syncPanelUI();
         }
         drawStartPos = null;
+      } else if (mode === 'pose') {
+         autoSaveProject(); 
       }
-
-      isInteracting = false;
+      isInteracting = false; 
       render();
     });
 
+    function autoUpdateCurrentKeyframe(bone) {
+       let existingKf = keyframes.find(k => k.frame === currentFrame);
+       if (existingKf && existingKf.states[bone.id]) {
+           existingKf.states[bone.id] = { x: bone.x, y: bone.y, angle: bone.angle, imgTransform: {...bone.imgTransform} };
+       }
+    }
+
     function uploadBoneImage(e) {
-      const file = e.target.files[0];
-      const bone = bones.find(b => b.id === selectedBoneId);
+      const file = e.target.files[0]; const bone = bones.find(b => b.id === selectedBoneId);
       if (!bone || !file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        const img = new Image();
-        img.onload = () => { bone.baseImage = img; autoSaveProject(); render(); };
-        img.src = ev.target.result;
-      };
+      reader.onload = (ev) => { const img = new Image(); img.onload = () => { bone.baseImage = img; autoSaveProject(); render(); }; img.src = ev.target.result; };
       reader.readAsDataURL(file);
     }
 
     function syncPanelUI() {
-      const bone = bones.find(b => b.id === selectedBoneId);
-      if (!bone) return;
-      document.getElementById('panel-title').innerText = `العظمة المحددة #${bone.id}`;
-      document.getElementById('texScaleX').value = bone.imgTransform.scaleX;
-      document.getElementById('texScaleY').value = bone.imgTransform.scaleY;
-      document.getElementById('texOffX').value = bone.imgTransform.offsetX;
-      document.getElementById('texOffY').value = bone.imgTransform.offsetY;
+      const bone = bones.find(b => b.id === selectedBoneId); if (!bone) return;
+      document.getElementById('panel-title').innerText = `إعدادات العظمة #${bone.id.substr(5,4)}`;
+      document.getElementById('texScaleX').value = bone.imgTransform.scaleX; document.getElementById('texScaleY').value = bone.imgTransform.scaleY;
+      document.getElementById('texOffX').value = bone.imgTransform.offsetX; document.getElementById('texOffY').value = bone.imgTransform.offsetY;
       document.getElementById('texRot').value = bone.imgTransform.rotation;
     }
 
     function deleteSelectedBone() {
       if (!selectedBoneId) return;
-      bones = bones.filter(b => b.id !== selectedBoneId && b.parentId !== selectedBoneId);
-      selectedBoneId = null;
-      autoSaveProject();
-      render();
+      const idsToDelete = new Set([selectedBoneId]);
+      let added = true;
+      while(added) {
+          added = false;
+          bones.forEach(b => {
+             if(idsToDelete.has(b.parentId) && !idsToDelete.has(b.id)) { idsToDelete.add(b.id); added = true; }
+          });
+      }
+      bones = bones.filter(b => !idsToDelete.has(b.id));
+      selectedBoneId = null; autoSaveProject(); render();
     }
 
     function updateTex() {
-      const bone = bones.find(b => b.id === selectedBoneId);
-      if (!bone) return;
+      const bone = bones.find(b => b.id === selectedBoneId); if (!bone) return;
       bone.imgTransform.scaleX = parseFloat(document.getElementById('texScaleX').value);
       bone.imgTransform.scaleY = parseFloat(document.getElementById('texScaleY').value);
       bone.imgTransform.offsetX = parseFloat(document.getElementById('texOffX').value);
       bone.imgTransform.offsetY = parseFloat(document.getElementById('texOffY').value);
       bone.imgTransform.rotation = parseFloat(document.getElementById('texRot').value);
-      autoSaveProject();
-      render();
+      autoUpdateCurrentKeyframe(bone); autoSaveProject(); render();
     }
 
     function saveKeyframe() {
@@ -563,47 +520,69 @@
       bones.forEach(b => { state[b.id] = { x: b.x, y: b.y, angle: b.angle, imgTransform: { ...b.imgTransform } }; });
       keyframes = keyframes.filter(k => k.frame !== currentFrame);
       keyframes.push({ frame: currentFrame, states: state });
-      autoSaveProject();
-      renderTimelineTrack();
+      keyframes.sort((a, b) => a.frame - b.frame); 
+      autoSaveProject(); renderTimelineTrack();
     }
 
     function deleteKeyframe() { keyframes = keyframes.filter(k => k.frame !== currentFrame); autoSaveProject(); renderTimelineTrack(); render(); }
 
-    function evaluateFrame(frame) {
-      if (keyframes.length === 0) return;
-      let prev = keyframes[0];
-      keyframes.forEach(k => { if (k.frame <= frame) prev = k; });
-      if (prev && prev.states) {
-        bones.forEach(b => {
-          if (prev.states[b.id]) {
-            b.x = prev.states[b.id].x; b.y = prev.states[b.id].y; b.angle = prev.states[b.id].angle;
-          }
-        });
-      }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function lerpAngle(a, b, t) {
+        let d = b - a;
+        while (d > 180) d -= 360; while (d < -180) d += 360;
+        return a + d * t;
+    }
+    
+    function easeInOutQuad(t) {
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
     }
 
-    function scrubTimeline(e) {
+    function evaluateFrame(frame) {
+      if (keyframes.length === 0) return;
+      let prevKf = keyframes[0]; let nextKf = keyframes[keyframes.length - 1];
+      for (let i = 0; i < keyframes.length; i++) { if (keyframes[i].frame <= frame) prevKf = keyframes[i]; }
+      for (let i = keyframes.length - 1; i >= 0; i--) { if (keyframes[i].frame >= frame) nextKf = keyframes[i]; }
+
+      bones.forEach(b => {
+        const s1 = prevKf.states[b.id]; const s2 = nextKf.states[b.id];
+        if (s1 && s2 && prevKf.frame !== nextKf.frame) {
+          const t = (frame - prevKf.frame) / (nextKf.frame - prevKf.frame);
+          const smoothT = easeInOutQuad(t); 
+          
+          b.x = lerp(s1.x, s2.x, smoothT);
+          b.y = lerp(s1.y, s2.y, smoothT);
+          b.angle = lerpAngle(s1.angle, s2.angle, smoothT);
+        } else if (s1) {
+          b.x = s1.x; b.y = s1.y; b.angle = s1.angle;
+        }
+      });
+    }
+
+    function updateScrubberUI(e) {
       const rect = document.getElementById('timeline-track').getBoundingClientRect();
       currentFrame = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
       document.getElementById('lbl-frame').innerText = currentFrame;
       document.getElementById('scrubber-line').style.left = `${currentFrame}%`;
-      render();
+      evaluateFrame(currentFrame); render();
     }
+
+    function startScrubbing(e) { isScrubbing = true; updateScrubberUI(e); }
+    window.addEventListener('mousemove', (e) => { if(isScrubbing) updateScrubberUI(e); });
+    window.addEventListener('mouseup', () => { isScrubbing = false; });
 
     function renderTimelineTrack() {
       const track = document.getElementById('timeline-track');
       track.querySelectorAll('.kf-node').forEach(n => n.remove());
       keyframes.forEach(k => {
-        const node = document.createElement('div');
-        node.className = 'kf-node';
-        node.style.left = `${k.frame}%`;
+        const node = document.createElement('div'); node.className = 'kf-node'; node.style.left = `${k.frame}%`;
+        node.title = `إطار: ${k.frame}`;
         track.appendChild(node);
       });
     }
 
     function togglePlay() {
       isPlaying = !isPlaying;
-      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل الحركة";
+      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل الأنيميشن";
       if (isPlaying) {
         animTimer = setInterval(() => {
           currentFrame = (currentFrame + 1) % 101;
@@ -614,28 +593,8 @@
       } else clearInterval(animTimer);
     }
 
-    function clearAll() { bones = []; keyframes = []; localStorage.removeItem('twencraft_studio_save'); renderTimelineTrack(); render(); }
-
-    function exportVideo() {
-      isExporting = true; render();
-      const stream = canvas.captureStream(30);
-      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      const chunks = [];
-      recorder.ondataavailable = e => chunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = `animation_${Date.now()}.webm`; a.click();
-        isExporting = false; render();
-      };
-      recorder.start();
-      setTimeout(() => recorder.stop(), 3000);
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadLibrary();
-      loadAutoSave();
-    });
+    function clearAll() { bones = []; keyframes = []; bgImage = null; bgImageSrc = null; localStorage.removeItem('twencraft_studio_save_v5'); renderTimelineTrack(); render(); }
+    window.addEventListener('DOMContentLoaded', () => { loadLibrary(); loadAnimationLibrary(); loadAutoSave(); });
   </script>
 </body>
 </html>
