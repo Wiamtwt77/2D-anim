@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Upload Studio - Pro Hierarchical Animation</title>
+  <title>Twencraft Upload Studio - Master Pro Edition</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -20,7 +20,7 @@
     .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 20px; }
     canvas { background: #14151c; border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); cursor: crosshair; }
 
-    .context-panel { position: absolute; top: 20px; right: 20px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 16px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 12px; width: 320px; max-height: calc(100% - 40px); overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 20; }
+    .context-panel { position: absolute; top: 20px; right: 20px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 16px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 12px; width: 330px; max-height: calc(100% - 40px); overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 20; }
     .context-panel h4 { font-size: 13px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 6px; margin-top: 6px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
     .field input[type="range"] { width: 120px; cursor: pointer; }
@@ -71,7 +71,8 @@
           <label style="color:#60a5fa; font-weight:bold;">دور العظمة:</label>
           <select id="bone-role-select" onchange="updateBoneRole(this.value)">
             <option value="none">بدون دور</option>
-            <option value="torso">الجذع (Torso - الأب الأساسي)</option>
+            <option value="root_handle">مقبض التحريك العام (Master Root)</option>
+            <option value="torso">الجذع (Torso)</option>
             <option value="chest">الصدر (Chest)</option>
             <option value="neck">الرقبة (Neck)</option>
             <option value="head">الرأس (Head)</option>
@@ -96,13 +97,15 @@
         <button onclick="document.getElementById('bone-img-file').click()" style="width:100%;">📁 رفع صورة للجزء المحدد</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
-        <h4>4. تعديل مقاسات الصورة</h4>
+        <h4>4. تحكم دقيق بمقاسات وحجم الصورة</h4>
         <div id="tex-controls" style="display:flex; flex-direction:column; gap:8px;">
-          <div class="field"><label>تكبير X:</label><input type="range" id="texScaleX" min="0.1" max="5" step="0.05" value="1" oninput="updateTex()"></div>
-          <div class="field"><label>تكبير Y:</label><input type="range" id="texScaleY" min="0.1" max="5" step="0.05" value="1" oninput="updateTex()"></div>
-          <div class="field"><label>إزاحة أفقية:</label><input type="range" id="texOffX" min="-300" max="300" value="0" oninput="updateTex()"></div>
-          <div class="field"><label>إزاحة عمودية:</label><input type="range" id="texOffY" min="-300" max="300" value="0" oninput="updateTex()"></div>
-          <div class="field"><label>تدوير (زاوية):</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>عرض الصورة (Width):</label><input type="number" id="texWidth" min="10" max="2000" value="100" oninput="updateTexDimensions()"></div>
+          <div class="field"><label>طول الصورة (Height):</label><input type="number" id="texHeight" min="10" max="2000" value="100" oninput="updateTexDimensions()"></div>
+          <div class="field"><label>تكبير مقياس X:</label><input type="range" id="texScaleX" min="0.1" max="5" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>تكبير مقياس Y:</label><input type="range" id="texScaleY" min="0.1" max="5" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة أفقية (X):</label><input type="range" id="texOffX" min="-300" max="300" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة عمودية (Y):</label><input type="range" id="texOffY" min="-300" max="300" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>تدوير الصورة:</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
         </div>
       </div>
     </div>
@@ -160,6 +163,8 @@
         this._updated = false;
 
         this.baseImage = null;
+        this.imgWidth = 0;
+        this.imgHeight = 0;
         this.imgTransform = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, rotation: 0 };
       }
     }
@@ -184,9 +189,9 @@
       const sampleAnims = {
         "animations/idle.json": {
           keyframes: [
-            { frame: 0, states: { torso: {angle:0}, chest: {angle:0}, neck: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } },
-            { frame: 50, states: { torso: {angle:2}, chest: {angle:-1}, neck: {angle:3}, head: {angle:5}, arm_r: {angle:22}, arm_l: {angle:-8} } },
-            { frame: 100, states: { torso: {angle:0}, chest: {angle:0}, neck: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } }
+            { frame: 0, states: { root_handle: {x:400, y:300, angle:0}, torso: {angle:0}, chest: {angle:0}, neck: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } },
+            { frame: 50, states: { root_handle: {x:400, y:305, angle:0}, torso: {angle:2}, chest: {angle:-1}, neck: {angle:3}, head: {angle:5}, arm_r: {angle:22}, arm_l: {angle:-8} } },
+            { frame: 100, states: { root_handle: {x:400, y:300, angle:0}, torso: {angle:0}, chest: {angle:0}, neck: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } }
           ]
         },
         "animations/wave.json": {
@@ -222,8 +227,8 @@
           const targetBone = bones.find(b => b.role === role);
           if (targetBone) {
             newStates[targetBone.id] = {
-              x: targetBone.x,
-              y: targetBone.y,
+              x: kf.states[role].x !== undefined ? kf.states[role].x : targetBone.x,
+              y: kf.states[role].y !== undefined ? kf.states[role].y : targetBone.y,
               angle: kf.states[role].angle !== undefined ? kf.states[role].angle : targetBone.angle,
               imgTransform: {...targetBone.imgTransform}
             };
@@ -252,7 +257,7 @@
           for (let boneId in kf.states) {
             const bone = bones.find(b => b.id === boneId);
             if (bone && bone.role !== "none") {
-              roleStates[bone.role] = { angle: kf.states[boneId].angle };
+              roleStates[bone.role] = { x: kf.states[boneId].x, y: kf.states[boneId].y, angle: kf.states[boneId].angle };
             }
           }
           return { frame: kf.frame, states: roleStates };
@@ -272,7 +277,14 @@
       const bone = bones.find(b => b.id === selectedBoneId);
       if (!bone) { alert("اختر عظمة أولاً!"); return; }
       const img = new Image();
-      img.onload = () => { bone.baseImage = img; autoSaveProject(); render(); };
+      img.onload = () => { 
+        bone.baseImage = img; 
+        bone.imgWidth = img.width; 
+        bone.imgHeight = img.height;
+        syncPanelUI();
+        autoSaveProject(); 
+        render(); 
+      };
       img.src = imgSrc;
     }
 
@@ -301,15 +313,16 @@
         bgImageSrc: bgImageSrc,
         bones: bones.map(b => ({
           id: b.id, parentId: b.parentId, role: b.role, x: b.x, y: b.y, length: b.length, angle: b.angle,
+          imgWidth: b.imgWidth, imgHeight: b.imgHeight,
           imgTransform: b.imgTransform, imgSrc: b.baseImage ? b.baseImage.src : null
         })),
         keyframes: keyframes
       };
-      localStorage.setItem('twencraft_studio_save_v7', JSON.stringify(data));
+      localStorage.setItem('twencraft_studio_save_v8', JSON.stringify(data));
     }
 
     function loadAutoSave() {
-      const saved = localStorage.getItem('twencraft_studio_save_v7');
+      const saved = localStorage.getItem('twencraft_studio_save_v8');
       if (!saved) return;
       const data = JSON.parse(saved);
       keyframes = data.keyframes || [];
@@ -329,9 +342,14 @@
       bones = data.bones.map(bData => {
         const b = new Bone(bData.id, bData.parentId, bData.x, bData.y, bData.length, bData.angle);
         if (bData.role) b.role = bData.role;
+        if (bData.imgWidth) b.imgWidth = bData.imgWidth;
+        if (bData.imgHeight) b.imgHeight = bData.imgHeight;
         if (bData.imgTransform) b.imgTransform = bData.imgTransform;
         if (bData.imgSrc) {
-          const img = new Image(); img.onload = () => render(); img.src = bData.imgSrc; b.baseImage = img;
+          const img = new Image(); 
+          img.onload = () => { if(!b.imgWidth) { b.imgWidth = img.width; b.imgHeight = img.height; } render(); }; 
+          img.src = bData.imgSrc; 
+          b.baseImage = img;
         }
         return b;
       });
@@ -347,7 +365,6 @@
       render();
     }
 
-    // محرك حساب التسلسل الهرمي (Forward Kinematics Engine)
     function updateBoneWorld(bone) {
       if (bone._updated) return;
       if (bone.parentId) {
@@ -392,26 +409,36 @@
           ctx.translate(bone.imgTransform.offsetX, bone.imgTransform.offsetY);
           ctx.rotate((bone.imgTransform.rotation * Math.PI) / 180);
           ctx.scale(bone.imgTransform.scaleX, bone.imgTransform.scaleY);
-          ctx.drawImage(bone.baseImage, 0, -bone.baseImage.height / 2);
+          const drawW = bone.imgWidth || bone.baseImage.width;
+          const drawH = bone.imgHeight || bone.baseImage.height;
+          ctx.drawImage(bone.baseImage, 0, -drawH / 2, drawW, drawH);
           ctx.restore();
         }
       });
 
       if (showBones) {
         bones.forEach(bone => {
-          const rad = (bone.worldAngle * Math.PI) / 180;
-          const endX = bone.worldX + Math.cos(rad) * bone.length;
-          const endY = bone.worldY + Math.sin(rad) * bone.length;
           const isSelected = bone.id === selectedBoneId;
+          const isMaster = bone.role === 'root_handle';
 
-          ctx.beginPath(); ctx.moveTo(bone.worldX, bone.worldY); ctx.lineTo(endX, endY);
-          ctx.lineWidth = isSelected ? 5 : 3; ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8'; ctx.stroke();
-          
-          ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 6, 0, Math.PI * 2);
-          ctx.fillStyle = !bone.parentId ? '#ef4444' : '#ffffff'; ctx.fill(); ctx.stroke();
-          
-          ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2);
-          ctx.fillStyle = isSelected ? '#60a5fa' : '#38bdf8'; ctx.fill();
+          if (isMaster) {
+            ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? '#3b82f6' : '#8b5cf6'; ctx.fill();
+            ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+          } else {
+            const rad = (bone.worldAngle * Math.PI) / 180;
+            const endX = bone.worldX + Math.cos(rad) * bone.length;
+            const endY = bone.worldY + Math.sin(rad) * bone.length;
+
+            ctx.beginPath(); ctx.moveTo(bone.worldX, bone.worldY); ctx.lineTo(endX, endY);
+            ctx.lineWidth = isSelected ? 5 : 3; ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8'; ctx.stroke();
+            
+            ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 6, 0, Math.PI * 2);
+            ctx.fillStyle = !bone.parentId ? '#ef4444' : '#ffffff'; ctx.fill(); ctx.stroke();
+            
+            ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? '#60a5fa' : '#38bdf8'; ctx.fill();
+          }
         });
 
         if (mode === 'draw' && snapIndicator) {
@@ -443,6 +470,7 @@
     function findSnapPoint(pos) {
       let snapRadius = 30; 
       for (let bone of bones) {
+        if (bone.role === 'root_handle') continue;
         const rad = (bone.worldAngle * Math.PI) / 180;
         const endX = bone.worldX + Math.cos(rad) * bone.length;
         const endY = bone.worldY + Math.sin(rad) * bone.length;
@@ -469,7 +497,7 @@
       if (isInteracting && mode === 'pose' && selectedBoneId) {
         const bone = bones.find(b => b.id === selectedBoneId);
         if (bone) {
-          if (!bone.parentId) { 
+          if (!bone.parentId || bone.role === 'root_handle') { 
             bone.x = currentMousePos.x; bone.y = currentMousePos.y; 
           } else {
             const parent = bones.find(b => b.id === bone.parentId);
@@ -500,13 +528,19 @@
       } else {
         selectedBoneId = null;
         for (let bone of bones) {
-          const rad = (bone.worldAngle * Math.PI) / 180;
-          const midX = bone.worldX + (Math.cos(rad) * bone.length)/2;
-          const midY = bone.worldY + (Math.sin(rad) * bone.length)/2;
-          
-          if (Math.hypot(currentMousePos.x - bone.worldX, currentMousePos.y - bone.worldY) < 20 ||
-              Math.hypot(currentMousePos.x - midX, currentMousePos.y - midY) < (bone.length/2)) { 
-            selectedBoneId = bone.id; break; 
+          if (bone.role === 'root_handle') {
+            if (Math.hypot(currentMousePos.x - bone.worldX, currentMousePos.y - bone.worldY) < 16) {
+              selectedBoneId = bone.id; break;
+            }
+          } else {
+            const rad = (bone.worldAngle * Math.PI) / 180;
+            const midX = bone.worldX + (Math.cos(rad) * bone.length)/2;
+            const midY = bone.worldY + (Math.sin(rad) * bone.length)/2;
+            
+            if (Math.hypot(currentMousePos.x - bone.worldX, currentMousePos.y - bone.worldY) < 20 ||
+                Math.hypot(currentMousePos.x - midX, currentMousePos.y - midY) < (bone.length/2)) { 
+              selectedBoneId = bone.id; break; 
+            }
           }
         }
         syncPanelUI();
@@ -550,14 +584,27 @@
       const file = e.target.files[0]; const bone = bones.find(b => b.id === selectedBoneId);
       if (!bone || !file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => { const img = new Image(); img.onload = () => { bone.baseImage = img; autoSaveProject(); render(); }; img.src = ev.target.result; };
+      reader.onload = (ev) => { 
+        const img = new Image(); 
+        img.onload = () => { 
+          bone.baseImage = img; 
+          bone.imgWidth = img.width; 
+          bone.imgHeight = img.height; 
+          syncPanelUI();
+          autoSaveProject(); 
+          render(); 
+        }; 
+        img.src = ev.target.result; 
+      };
       reader.readAsDataURL(file);
     }
 
     function syncPanelUI() {
       const bone = bones.find(b => b.id === selectedBoneId); if (!bone) return;
-      document.getElementById('panel-title').innerText = `إعدادات العظمة #${bone.id.substr(5,4)}`;
+      document.getElementById('panel-title').innerText = `إعدادات العنصر #${bone.id.substr(5,4)}`;
       document.getElementById('bone-role-select').value = bone.role || "none";
+      document.getElementById('texWidth').value = Math.round(bone.imgWidth || (bone.baseImage ? bone.baseImage.width : 100));
+      document.getElementById('texHeight').value = Math.round(bone.imgHeight || (bone.baseImage ? bone.baseImage.height : 100));
       document.getElementById('texScaleX').value = bone.imgTransform.scaleX; document.getElementById('texScaleY').value = bone.imgTransform.scaleY;
       document.getElementById('texOffX').value = bone.imgTransform.offsetX; document.getElementById('texOffY').value = bone.imgTransform.offsetY;
       document.getElementById('texRot').value = bone.imgTransform.rotation;
@@ -584,6 +631,13 @@
       bone.imgTransform.offsetX = parseFloat(document.getElementById('texOffX').value);
       bone.imgTransform.offsetY = parseFloat(document.getElementById('texOffY').value);
       bone.imgTransform.rotation = parseFloat(document.getElementById('texRot').value);
+      autoUpdateCurrentKeyframe(bone); autoSaveProject(); render();
+    }
+
+    function updateTexDimensions() {
+      const bone = bones.find(b => b.id === selectedBoneId); if (!bone) return;
+      bone.imgWidth = parseFloat(document.getElementById('texWidth').value) || 100;
+      bone.imgHeight = parseFloat(document.getElementById('texHeight').value) || 100;
       autoUpdateCurrentKeyframe(bone); autoSaveProject(); render();
     }
 
@@ -665,7 +719,7 @@
       } else clearInterval(animTimer);
     }
 
-    function clearAll() { bones = []; keyframes = []; bgImage = null; bgImageSrc = null; localStorage.removeItem('twencraft_studio_save_v7'); renderTimelineTrack(); render(); }
+    function clearAll() { bones = []; keyframes = []; bgImage = null; bgImageSrc = null; localStorage.removeItem('twencraft_studio_save_v8'); renderTimelineTrack(); render(); }
     window.addEventListener('DOMContentLoaded', () => { loadLibrary(); loadAnimationLibrary(); loadAutoSave(); });
   </script>
 </body>
