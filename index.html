@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>2D Skeleton & Voice Studio</title>
+  <title>2D Skeleton & Gesture Studio</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -15,7 +15,6 @@
     button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; }
     button.accent { background: #8b5cf6; border-color: #a78bfa; }
     button.danger { background: #ef4444; border-color: #f87171; }
-    button.success { background: #10b981; border-color: #34d399; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
     .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; }
@@ -30,4 +29,503 @@
     .gesture-card { background: #1e202a; border: 1px solid #2e313d; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 11px; }
     .gesture-card.selected { border-color: #3b82f6; background: #2563eb33; }
 
-    .timeline { height: 13
+    .timeline { height: 130px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .timeline-controls { display: flex; align-items: center; justify-content: space-between; }
+    .track { position: relative; height: 32px; background: #0f1015; border: 1px solid #2e313d; border-radius: 6px; cursor: pointer; }
+    .scrubber { position: absolute; top: 0; width: 3px; height: 100%; background: #ef4444; pointer-events: none; z-index: 5; }
+    .kf-node { position: absolute; top: 50%; width: 12px; height: 12px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 8px #3b82f6; z-index: 4; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="tool-group">
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك (Pose)</button>
+      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم الهيكل (Draw)</button>
+      <button id="btn-mode-texture" onclick="setMode('texture')">🖼️ تكييف الصورة (Texture Fit)</button>
+      <button id="btn-toggle-bones" onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
+    </div>
+    <div class="tool-group">
+      <button class="accent" onclick="exportVideo()">🎬 تصدير فيديو</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
+      <button class="danger" onclick="clearAll()">💥 مسح المشهد</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <div class="canvas-container">
+      <canvas id="stage" width="960" height="600"></canvas>
+
+      <div class="context-panel" id="side-panel">
+        <h3 id="panel-title" style="font-size:14px; color:#f8fafc;">اختر عظمة للتعديل</h3>
+        
+        <h4>1. مكتبة الموارد السريعة</h4>
+        <div id="res-library" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d;">
+          <span style="font-size:10px; color:#64748b;">جاري التحميل...</span>
+        </div>
+
+        <h4>2. استيراد صورة مستقلة</h4>
+        <button onclick="document.getElementById('bone-img-file').click()">🖼️ رفع صورة ملف خاص</button>
+        <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
+
+        <h4>3. أدوات تكييف الصورة</h4>
+        <div id="tex-controls" style="display:flex; flex-direction:column; gap:6px;">
+          <div class="field"><label>مط X:</label><input type="range" id="texScaleX" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>مط Y:</label><input type="range" id="texScaleY" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة X:</label><input type="range" id="texOffX" min="-200" max="200" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة Y:</label><input type="range" id="texOffY" min="-200" max="200" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>دوران:</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
+        </div>
+
+        <h4>4. الإيماءات والمستودع</h4>
+        <button onclick="document.getElementById('gesture-files').click()">➕ إيماءة متتالية جديدة</button>
+        <input type="file" id="gesture-files" accept="image/*" multiple style="display:none;" onchange="createMultiFrameGesture(event)">
+        
+        <div id="gesture-speed-container" style="display:none; flex-direction:column; gap:4px;">
+          <div class="field"><label>سرعة الإيماءة (FPS):</label><input type="range" id="gestureFps" min="1" max="30" value="10" oninput="updateGestureSpeed()"></div>
+        </div>
+        <div class="gesture-list" id="gestureList"></div>
+
+        <h4>5. مسجل ومغيّر الصوت (Voice Pitch)</h4>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button id="btn-record-audio" onclick="toggleAudioRecording()">🎙️ بدء التسجيل الصوتي</button>
+          <div class="field">
+            <label>طبقة الصوت (Pitch):</label>
+            <input type="range" id="pitchSlider" min="0.5" max="2.0" step="0.05" value="1.0" oninput="updateAudioSettings()">
+          </div>
+          <div class="field">
+            <label>إضافة صدى (Echo):</label>
+            <input type="checkbox" id="echoCheck" onchange="updateAudioSettings()">
+          </div>
+          <button onclick="playProcessedAudio()" id="btn-play-audio" disabled>🔊 تشغيل الصوت المعدل</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-controls">
+      <div class="tool-group">
+        <button id="btn-play" onclick="togglePlay()">▶ تشغيل الحركة</button>
+        <button onclick="saveKeyframe()">➕ حفظ كيفريم</button>
+        <button class="danger" onclick="deleteKeyframe()">🗑️ حذف كيفريم</button>
+      </div>
+      <span style="font-size: 13px;">الإطار الحالي: <b id="lbl-frame" style="color:#60a5fa;">0</b> / 100</span>
+    </div>
+    <div class="track" id="timeline-track" onclick="scrubTimeline(event)">
+      <div class="scrubber" id="scrubber-line" style="left: 0%;"></div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+
+    let mode = 'pose';
+    let bones = [];
+    let selectedBoneId = null;
+    let currentFrame = 0;
+    let isPlaying = false;
+    let keyframes = [];
+    let animTimer = null;
+    let showBones = true;
+    let isExporting = false;
+
+    let isInteracting = false;
+    let drawStartPos = null;
+    let activeJointAction = null;
+    let texDragStart = null;
+
+    // --- Audio Processing Variables ---
+    let audioCtx = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioBuffer = null;
+    let isRecordingAudio = false;
+
+    class Bone {
+      constructor(id, parentId, x, y, length, angle) {
+        this.id = id;
+        this.parentId = parentId;
+        this.x = x; 
+        this.y = y;
+        this.length = length;
+        this.angle = angle; 
+
+        this.worldX = 0;
+        this.worldY = 0;
+        this.worldAngle = 0;
+
+        this.baseImage = null;
+        this.gestures = [];
+        this.activeGestureId = null;
+
+        this.imgTransform = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, rotation: 0 };
+      }
+    }
+
+    // --- 1. Library & Autosave Engine ---
+    async function loadLibrary() {
+      try {
+        const res = await fetch('./res/list.json');
+        const items = await res.json();
+        const box = document.getElementById('res-library');
+        
+        box.innerHTML = items.map(item => `
+          <div onclick="applyLibraryImg('${item.src}')" style="background:#1e202a; border:1px solid #2e313d; padding:4px; border-radius:4px; text-align:center; cursor:pointer;">
+            <img src="${item.src}" style="width:100%; height:36px; object-fit:contain;" />
+            <span style="font-size:9px; color:#cbd5e1; display:block;">${item.n}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        document.getElementById('res-library').innerHTML = '<span style="font-size:10px; color:#ef4444;">لم يتوفر list.json</span>';
+      }
+    }
+
+    function applyLibraryImg(imgSrc) {
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) { alert("اختر عظمة من المسرح أولاً لتركيب الشكل عليها!"); return; }
+      
+      const img = new Image();
+      img.onload = () => {
+        bone.baseImage = img;
+        bone.activeGestureId = null;
+        syncPanelUI();
+        autoSaveProject();
+        render();
+      };
+      img.src = imgSrc;
+    }
+
+    function autoSaveProject() {
+      const data = {
+        bones: bones.map(b => ({
+          id: b.id, parentId: b.parentId, x: b.x, y: b.y, length: b.length, angle: b.angle,
+          imgTransform: b.imgTransform, imgSrc: b.baseImage ? b.baseImage.src : null
+        })),
+        keyframes: keyframes
+      };
+      localStorage.setItem('twencraft_studio_save', JSON.stringify(data));
+    }
+
+    function loadAutoSave() {
+      const saved = localStorage.getItem('twencraft_studio_save');
+      if (!saved) return;
+      const data = JSON.parse(saved);
+      keyframes = data.keyframes || [];
+      
+      if (!data.bones || data.bones.length === 0) return;
+
+      bones = data.bones.map(bData => {
+        const b = new Bone(bData.id, bData.parentId, bData.x, bData.y, bData.length, bData.angle);
+        b.imgTransform = bData.imgTransform;
+        if (bData.imgSrc) {
+          const img = new Image();
+          img.onload = () => { render(); };
+          img.src = bData.imgSrc;
+          b.baseImage = img;
+        }
+        return b;
+      });
+      renderTimelineTrack();
+      render();
+    }
+
+    // --- 2. Voice Pitch Modification System ---
+    async function toggleAudioRecording() {
+      const btn = document.getElementById('btn-record-audio');
+      if (!isRecordingAudio) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(audioChunks, { type: 'audio/wav' });
+          const arrayBuffer = await blob.arrayBuffer();
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+          document.getElementById('btn-play-audio').disabled = false;
+        };
+
+        mediaRecorder.start();
+        isRecordingAudio = true;
+        btn.innerText = "🛑 إيقاف التسجيل";
+        btn.style.background = "#ef4444";
+      } else {
+        mediaRecorder.stop();
+        isRecordingAudio = false;
+        btn.innerText = "🎙️ بدء التسجيل الصوتي";
+        btn.style.background = "#2a2c37";
+      }
+    }
+
+    function playProcessedAudio() {
+      if (!audioBuffer) return;
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = audioBuffer;
+
+      // Pitch adjustment via playbackRate
+      const pitchValue = parseFloat(document.getElementById('pitchSlider').value);
+      source.playbackRate.value = pitchValue;
+
+      // Echo Filter
+      if (document.getElementById('echoCheck').checked) {
+        const delay = audioCtx.createDelay();
+        delay.delayTime.value = 0.2;
+        const feedback = audioCtx.createGain();
+        feedback.gain.value = 0.4;
+
+        source.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(audioCtx.destination);
+      }
+
+      source.connect(audioCtx.destination);
+      source.start(0);
+    }
+
+    function updateAudioSettings() {
+      autoSaveProject();
+    }
+
+    // --- 3. Base Engine Logic & Controls ---
+    function toggleBoneVisibility() {
+      showBones = !showBones;
+      document.getElementById('btn-toggle-bones').innerText = showBones ? "👁️ إخفاء الهيكل" : "👁️ إظهار الهيكل";
+      render();
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      document.querySelectorAll('header button').forEach(b => {
+        if (b.id.startsWith('btn-mode-')) b.classList.remove('active');
+      });
+      const targetBtn = document.getElementById(`btn-mode-${newMode}`);
+      if (targetBtn) targetBtn.classList.add('active');
+      render();
+    }
+
+    function updateTransforms() {
+      bones.forEach(bone => {
+        if (!bone.parentId) {
+          bone.worldX = bone.x;
+          bone.worldY = bone.y;
+          bone.worldAngle = bone.angle;
+        } else {
+          const parent = bones.find(b => b.id === bone.parentId);
+          if (parent) {
+            const rad = (parent.worldAngle * Math.PI) / 180;
+            bone.worldX = parent.worldX + Math.cos(rad) * parent.length + bone.x;
+            bone.worldY = parent.worldY + Math.sin(rad) * parent.length + bone.y;
+            bone.worldAngle = parent.worldAngle + bone.angle;
+          }
+        }
+      });
+    }
+
+    function render() {
+      if (!isInteracting) evaluateFrame(currentFrame);
+      updateTransforms();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+
+      bones.forEach(bone => {
+        let activeImageToDraw = bone.baseImage;
+        if (bone.activeGestureId) {
+          const gesture = bone.gestures.find(g => g.id === bone.activeGestureId);
+          if (gesture && gesture.frames.length > 0) {
+            const frameIdx = Math.floor((currentFrame * (gesture.fps / 15))) % gesture.frames.length;
+            activeImageToDraw = gesture.frames[frameIdx];
+          }
+        }
+
+        if (activeImageToDraw) {
+          ctx.save();
+          ctx.translate(bone.worldX, bone.worldY);
+          ctx.rotate((bone.worldAngle * Math.PI) / 180);
+          ctx.translate(bone.imgTransform.offsetX, bone.imgTransform.offsetY);
+          ctx.rotate((bone.imgTransform.rotation * Math.PI) / 180);
+          ctx.scale(bone.imgTransform.scaleX, bone.imgTransform.scaleY);
+          ctx.drawImage(activeImageToDraw, 0, -activeImageToDraw.height / 2);
+          ctx.restore();
+        }
+      });
+
+      if (showBones && !isExporting) {
+        bones.forEach(bone => {
+          const rad = (bone.worldAngle * Math.PI) / 180;
+          const endX = bone.worldX + Math.cos(rad) * bone.length;
+          const endY = bone.worldY + Math.sin(rad) * bone.length;
+          const isSelected = bone.id === selectedBoneId;
+
+          ctx.beginPath(); ctx.moveTo(bone.worldX, bone.worldY); ctx.lineTo(endX, endY);
+          ctx.lineWidth = isSelected ? 5 : 3; ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8'; ctx.stroke();
+
+          ctx.beginPath(); ctx.arc(bone.worldX, bone.worldY, 6, 0, Math.PI * 2);
+          ctx.fillStyle = !bone.parentId ? '#ef4444' : '#ffffff'; ctx.fill(); ctx.stroke();
+
+          ctx.beginPath(); ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? '#60a5fa' : '#38bdf8'; ctx.fill();
+        });
+      }
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = '#1a1c24'; ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+      for (let y = 0; y < canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+    }
+
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pos = getMousePos(e);
+      isInteracting = true;
+      if (mode === 'draw') {
+        drawStartPos = { parentId: null, x: pos.x, y: pos.y, currentX: pos.x, currentY: pos.y };
+      } else {
+        selectedBoneId = null;
+        for (let bone of bones) {
+          if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 25) {
+            selectedBoneId = bone.id;
+            activeJointAction = 'move_root';
+            break;
+          }
+        }
+        syncPanelUI();
+      }
+      render();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isInteracting) return;
+      const pos = getMousePos(e);
+      if (mode === 'pose' && selectedBoneId) {
+        const bone = bones.find(b => b.id === selectedBoneId);
+        if (bone && !bone.parentId) { bone.x = pos.x; bone.y = pos.y; }
+        autoSaveProject();
+      }
+      render();
+    });
+
+    canvas.addEventListener('mouseup', () => { isInteracting = false; render(); });
+
+    function uploadBoneImage(e) {
+      const file = e.target.files[0];
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone || !file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => { bone.baseImage = img; autoSaveProject(); render(); };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function syncPanelUI() {
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) return;
+      document.getElementById('panel-title').innerText = `العظمة المحددة #${bone.id}`;
+    }
+
+    function updateTex() {
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) return;
+      bone.imgTransform.scaleX = parseFloat(document.getElementById('texScaleX').value);
+      bone.imgTransform.scaleY = parseFloat(document.getElementById('texScaleY').value);
+      bone.imgTransform.offsetX = parseFloat(document.getElementById('texOffX').value);
+      bone.imgTransform.offsetY = parseFloat(document.getElementById('texOffY').value);
+      bone.imgTransform.rotation = parseFloat(document.getElementById('texRot').value);
+      autoSaveProject();
+      render();
+    }
+
+    function saveKeyframe() {
+      const state = {};
+      bones.forEach(b => { state[b.id] = { x: b.x, y: b.y, angle: b.angle, imgTransform: { ...b.imgTransform } }; });
+      keyframes = keyframes.filter(k => k.frame !== currentFrame);
+      keyframes.push({ frame: currentFrame, states: state });
+      autoSaveProject();
+      renderTimelineTrack();
+    }
+
+    function deleteKeyframe() { keyframes = keyframes.filter(k => k.frame !== currentFrame); autoSaveProject(); renderTimelineTrack(); render(); }
+
+    function evaluateFrame(frame) {
+      if (keyframes.length === 0) return;
+      let prev = keyframes[0];
+      keyframes.forEach(k => { if (k.frame <= frame) prev = k; });
+      if (prev && prev.states) {
+        bones.forEach(b => {
+          if (prev.states[b.id]) {
+            b.x = prev.states[b.id].x; b.y = prev.states[b.id].y; b.angle = prev.states[b.id].angle;
+          }
+        });
+      }
+    }
+
+    function scrubTimeline(e) {
+      const rect = document.getElementById('timeline-track').getBoundingClientRect();
+      currentFrame = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+      document.getElementById('lbl-frame').innerText = currentFrame;
+      document.getElementById('scrubber-line').style.left = `${currentFrame}%`;
+      render();
+    }
+
+    function renderTimelineTrack() {
+      const track = document.getElementById('timeline-track');
+      track.querySelectorAll('.kf-node').forEach(n => n.remove());
+      keyframes.forEach(k => {
+        const node = document.createElement('div');
+        node.className = 'kf-node';
+        node.style.left = `${k.frame}%`;
+        track.appendChild(node);
+      });
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل الحركة";
+      if (isPlaying) {
+        animTimer = setInterval(() => {
+          currentFrame = (currentFrame + 1) % 101;
+          document.getElementById('lbl-frame').innerText = currentFrame;
+          document.getElementById('scrubber-line').style.left = `${currentFrame}%`;
+          render();
+        }, 1000 / 30);
+      } else clearInterval(animTimer);
+    }
+
+    function clearAll() { bones = []; keyframes = []; localStorage.removeItem('twencraft_studio_save'); renderTimelineTrack(); render(); }
+
+    function exportVideo() {
+      isExporting = true; render();
+      const stream = canvas.captureStream(30);
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks = [];
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `animation_${Date.now()}.webm`; a.click();
+        isExporting = false; render();
+      };
+      recorder.start();
+      setTimeout(() => recorder.stop(), 3000);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadLibrary();
+      loadAutoSave();
+    });
+  </script>
+</body>
+</html>
