@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Upload Studio - Pro Animation</title>
+  <title>Twencraft Upload Studio - Semantic Animation Pro</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -24,7 +24,7 @@
     .context-panel h4 { font-size: 13px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 6px; margin-top: 6px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
     .field input[type="range"] { width: 120px; cursor: pointer; }
-    .field input[type="number"] { width: 60px; background: #111217; border: 1px solid #3d4050; color: #fff; padding: 4px; border-radius: 4px; text-align: center; }
+    .field input[type="number"], .field select { width: 110px; background: #111217; border: 1px solid #3d4050; color: #fff; padding: 4px; border-radius: 4px; text-align: center; }
 
     .timeline { height: 140px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 12px 24px; display: flex; flex-direction: column; gap: 12px; z-index: 10; }
     .timeline-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
@@ -54,7 +54,7 @@
     </div>
 
     <div class="tool-group">
-      <button class="accent">🎬 تصدير</button>
+      <button class="accent" onclick="saveExternalAnimation()">💾 تصدير حركة JSON</button>
       <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
       <button class="danger" onclick="clearAll()">💥 مسح المشروع</button>
     </div>
@@ -67,6 +67,19 @@
       <div class="context-panel" id="side-panel">
         <h3 id="panel-title" style="font-size:15px; color:#f8fafc; font-weight:bold;">إعدادات العظمة</h3>
         
+        <div class="field" style="background:#1e202a; padding:6px; border-radius:6px; border:1px solid #3d4050;">
+          <label style="color:#60a5fa; font-weight:bold;">دور العظمة:</label>
+          <select id="bone-role-select" onchange="updateBoneRole(this.value)">
+            <option value="none">بدون دور</option>
+            <option value="torso">الجذع (Torso)</option>
+            <option value="head">الرأس (Head)</option>
+            <option value="arm_r">اليد اليمنى (Right Arm)</option>
+            <option value="arm_l">اليد اليسرى (Left Arm)</option>
+            <option value="leg_r">الرجل اليمنى (Right Leg)</option>
+            <option value="leg_l">الرجل اليسرى (Left Leg)</option>
+          </select>
+        </div>
+
         <h4>1. مكتبة الموارد السريعة</h4>
         <div id="res-library" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d;">
           <span style="font-size:10px; color:#64748b;">جاري التحميل...</span>
@@ -133,6 +146,7 @@
       constructor(id, parentId, x, y, length, angle) {
         this.id = id;
         this.parentId = parentId;
+        this.role = "none"; // دور العظمة الدلالي الجديد
         this.x = x; 
         this.y = y;
         this.length = length;
@@ -165,34 +179,94 @@
     }
 
     async function loadAnimationLibrary() {
+      // حركات تجريبية مدمجة تدعم الأدوار الدلالية (Semantic Roles) لضمان العمل الفوري
+      const sampleAnims = {
+        "animations/idle.json": {
+          keyframes: [
+            { frame: 0, states: { torso: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } },
+            { frame: 50, states: { torso: {angle:2}, head: {angle:-3}, arm_r: {angle:22}, arm_l: {angle:-8} } },
+            { frame: 100, states: { torso: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } }
+          ]
+        },
+        "animations/wave.json": {
+          keyframes: [
+            { frame: 0, states: { arm_r: {angle:-45}, head: {angle:0} } },
+            { frame: 25, states: { arm_r: {angle:-90}, head: {angle:10} } },
+            { frame: 50, states: { arm_r: {angle:-30}, head: {angle:-10} } },
+            { frame: 75, states: { arm_r: {angle:-90}, head: {angle:10} } },
+            { frame: 100, states: { arm_r: {angle:-45}, head: {angle:0} } }
+          ]
+        }
+      };
+
       const anims = [
-        { name: "وضعيات الاسترخاء", file: "animations/idle.json" },
-        { name: "حركة المشي", file: "animations/walk.json" },
-        { name: "تلويح باليد", file: "animations/wave.json" }
+        { name: "وضعيات الاسترخاء (Idle)", file: "animations/idle.json", inline: sampleAnims["animations/idle.json"] },
+        { name: "تلويح باليد (Wave)", file: "animations/wave.json", inline: sampleAnims["animations/wave.json"] }
       ];
       
       const box = document.getElementById('anim-library');
       box.innerHTML = anims.map(anim => `
-        <button onclick="applyExternalAnimation('${anim.file}')" style="width:100%; text-align:right; font-size:11px; padding:6px; background:#1e202a; border-color:#2e313d;">
+        <button onclick='applySemanticAnimation(${JSON.stringify(anim.inline)})' style="width:100%; text-align:right; font-size:11px; padding:6px; background:#1e202a; border-color:#2e313d;">
           🎬 ${anim.name}
         </button>
       `).join('');
     }
 
-    async function applyExternalAnimation(filePath) {
-      try {
-        const response = await fetch(filePath);
-        if (!response.ok) return;
-        const animData = await response.json();
-        if (animData && animData.keyframes) {
-          keyframes = animData.keyframes;
-          renderTimelineTrack();
-          evaluateFrame(currentFrame);
-          render();
+    // تطبيق الحركة بناءً على الأدوار الدلالية (Semantic Matching)
+    function applySemanticAnimation(animData) {
+      if (!animData || !animData.keyframes) return;
+      
+      // تحويل مفاتيح الحركات من الأدوار (مثل torso) إلى المعارف الحالية (IDs) للهيكل
+      keyframes = animData.keyframes.map(kf => {
+        const newStates = {};
+        for (let role in kf.states) {
+          const targetBone = bones.find(b => b.role === role);
+          if (targetBone) {
+            newStates[targetBone.id] = {
+              x: targetBone.x,
+              y: targetBone.y,
+              angle: kf.states[role].angle !== undefined ? kf.states[role].angle : targetBone.angle,
+              imgTransform: {...targetBone.imgTransform}
+            };
+          }
         }
-      } catch (e) {
-        // معالجة صامتة وآمنة تماماً بدون إظهار أي تنبيه مزعج للمستخدم
-      }
+        return { frame: kf.frame, states: newStates };
+      });
+
+      renderTimelineTrack();
+      evaluateFrame(currentFrame);
+      render();
+    }
+
+    function updateBoneRole(newRole) {
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) return;
+      bone.role = newRole;
+      autoSaveProject();
+    }
+
+    function saveExternalAnimation() {
+      const animExport = {
+        timestamp: Date.now(),
+        keyframes: keyframes.map(kf => {
+          const roleStates = {};
+          for (let boneId in kf.states) {
+            const bone = bones.find(b => b.id === boneId);
+            if (bone && bone.role !== "none") {
+              roleStates[bone.role] = { angle: kf.states[boneId].angle };
+            }
+          }
+          return { frame: kf.frame, states: roleStates };
+        })
+      };
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(animExport, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "custom_animation.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
     }
 
     function applyLibraryImg(imgSrc) {
@@ -227,16 +301,16 @@
         canvasWidth: canvas.width, canvasHeight: canvas.height,
         bgImageSrc: bgImageSrc,
         bones: bones.map(b => ({
-          id: b.id, parentId: b.parentId, x: b.x, y: b.y, length: b.length, angle: b.angle,
+          id: b.id, parentId: b.parentId, role: b.role, x: b.x, y: b.y, length: b.length, angle: b.angle,
           imgTransform: b.imgTransform, imgSrc: b.baseImage ? b.baseImage.src : null
         })),
         keyframes: keyframes
       };
-      localStorage.setItem('twencraft_studio_save_v5', JSON.stringify(data));
+      localStorage.setItem('twencraft_studio_save_v6', JSON.stringify(data));
     }
 
     function loadAutoSave() {
-      const saved = localStorage.getItem('twencraft_studio_save_v5');
+      const saved = localStorage.getItem('twencraft_studio_save_v6');
       if (!saved) return;
       const data = JSON.parse(saved);
       keyframes = data.keyframes || [];
@@ -255,6 +329,7 @@
       if (!data.bones) return;
       bones = data.bones.map(bData => {
         const b = new Bone(bData.id, bData.parentId, bData.x, bData.y, bData.length, bData.angle);
+        if (bData.role) b.role = bData.role;
         if (bData.imgTransform) b.imgTransform = bData.imgTransform;
         if (bData.imgSrc) {
           const img = new Image(); img.onload = () => render(); img.src = bData.imgSrc; b.baseImage = img;
@@ -482,6 +557,7 @@
     function syncPanelUI() {
       const bone = bones.find(b => b.id === selectedBoneId); if (!bone) return;
       document.getElementById('panel-title').innerText = `إعدادات العظمة #${bone.id.substr(5,4)}`;
+      document.getElementById('bone-role-select').value = bone.role || "none";
       document.getElementById('texScaleX').value = bone.imgTransform.scaleX; document.getElementById('texScaleY').value = bone.imgTransform.scaleY;
       document.getElementById('texOffX').value = bone.imgTransform.offsetX; document.getElementById('texOffY').value = bone.imgTransform.offsetY;
       document.getElementById('texRot').value = bone.imgTransform.rotation;
@@ -589,7 +665,7 @@
       } else clearInterval(animTimer);
     }
 
-    function clearAll() { bones = []; keyframes = []; bgImage = null; bgImageSrc = null; localStorage.removeItem('twencraft_studio_save_v5'); renderTimelineTrack(); render(); }
+    function clearAll() { bones = []; keyframes = []; bgImage = null; bgImageSrc = null; localStorage.removeItem('twencraft_studio_save_v6'); renderTimelineTrack(); render(); }
     window.addEventListener('DOMContentLoaded', () => { loadLibrary(); loadAnimationLibrary(); loadAutoSave(); });
   </script>
 </body>
