@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>2D Skeleton & Gesture Studio</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    header { background: #1a1b23; padding: 10px 16px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+    .tool-group { display: flex; gap: 8px; align-items: center; }
+    
+    button { background: #2a2c37; border: 1px solid #3d4050; color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+    button:hover { background: #373a4a; }
+    button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; }
+    button.accent { background: #8b5cf6; border-color: #a78bfa; }
+    button.danger { background: #ef4444; border-color: #f87171; }
+
+    .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
+    .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; }
+    canvas { background: #14151c; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: crosshair; }
+
+    .context-panel { position: absolute; top: 15px; right: 15px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 14px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 10px; width: 290px; max-height: calc(100% - 30px); overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .context-panel h4 { font-size: 12px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 4px; margin-top: 4px; }
+    .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+    .field input[type="range"] { width: 110px; }
+
+    .gesture-list { display: flex; flex-direction: column; gap: 8px; max-height: 140px; overflow-y: auto; background: #111217; padding: 6px; border-radius: 6px; border: 1px solid #2e313d; }
+    .gesture-card { background: #1e202a; border: 1px solid #2e313d; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 11px; }
+    .gesture-card.selected { border-color: #3b82f6; background: #2563eb33; }
+    .gesture-preview-thumbs { display: flex; gap: 3px; max-width: 80px; overflow: hidden; }
+    .gesture-preview-thumbs img { width: 20px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid #3d4050; }
+
+    .timeline { height: 130px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .timeline-controls { display: flex; align-items: center; justify-content: space-between; }
+    .track { position: relative; height: 32px; background: #0f1015; border: 1px solid #2e313d; border-radius: 6px; cursor: pointer; }
+    .scrubber { position: absolute; top: 0; width: 3px; height: 100%; background: #ef4444; pointer-events: none; z-index: 5; }
+    .kf-node { position: absolute; top: 50%; width: 12px; height: 12px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 8px #3b82f6; z-index: 4; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="tool-group">
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك (Pose)</button>
+      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم الهيكل (Draw)</button>
+      <button id="btn-mode-texture" onclick="setMode('texture')">🖼️ تكييف الصورة (Texture Fit)</button>
+      <button id="btn-toggle-bones" onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
+    </div>
+    <div class="tool-group">
+      <button class="accent" onclick="exportVideo()">🎬 تصدير فيديو</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
+      <button class="danger" onclick="clearAll()">💥 مسح المشهد</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <div class="canvas-container">
+      <canvas id="stage" width="960" height="600"></canvas>
+
+      <div class="context-panel" id="side-panel">
+        <h3 id="panel-title" style="font-size:14px; color:#f8fafc;">اختر عظمة للتعديل</h3>
+        
+        <h4>1. الصورة الأساسية للعظمة</h4>
+        <button onclick="document.getElementById('bone-img-file').click()">🖼️ رفع صورة لهذه العظمة</button>
+        <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
+
+        <h4>2. أدوات تكييف الصورة</h4>
+        <p style="font-size:10px; color:#94a3b8;">في وضع تكييف الصورة: اسحب على المسرح للإزاحة، Shift+سحب للتدوير، والفيض للتكبير</p>
+        <div id="tex-controls" style="display:flex; flex-direction:column; gap:6px;">
+          <div class="field"><label>مط X:</label><input type="range" id="texScaleX" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>مط Y:</label><input type="range" id="texScaleY" min="0.1" max="4" step="0.05" value="1" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة X:</label><input type="range" id="texOffX" min="-200" max="200" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>إزاحة Y:</label><input type="range" id="texOffY" min="-200" max="200" value="0" oninput="updateTex()"></div>
+          <div class="field"><label>دوران:</label><input type="range" id="texRot" min="-180" max="180" value="0" oninput="updateTex()"></div>
+        </div>
+
+        <h4>3. مستودع الإيماءات وتعديل السرعة</h4>
+        <button onclick="document.getElementById('gesture-files').click()">➕ إيماءة متتالية جديدة</button>
+        <input type="file" id="gesture-files" accept="image/*" multiple style="display:none;" onchange="createMultiFrameGesture(event)">
+        
+        <div id="gesture-speed-container" style="display:none; flex-direction:column; gap:4px;">
+          <div class="field"><label>سرعة الإيماءة (FPS):</label><input type="range" id="gestureFps" min="1" max="30" value="10" oninput="updateGestureSpeed()"></div>
+        </div>
+
+        <div class="gesture-list" id="gestureList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-controls">
+      <div class="tool-group">
+        <button id="btn-play" onclick="togglePlay()">▶ تشغيل</button>
+        <button onclick="saveKeyframe()">➕ حفظ كيفريم</button>
+        <button class="danger" onclick="deleteKeyframe()">🗑️ حذف كيفريم</button>
+      </div>
+      <span style="font-size: 13px;">الإطار الحالي: <b id="lbl-frame" style="color:#60a5fa;">0</b> / 100</span>
+    </div>
+    <div class="track" id="timeline-track" onclick="scrubTimeline(event)">
+      <div class="scrubber" id="scrubber-line" style="left: 0%;"></div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+
+    let mode = 'pose'; // 'pose' | 'draw' | 'texture'
+    let bones = [];
+    let selectedBoneId = null;
+    let currentFrame = 0;
+    let isPlaying = false;
+    let keyframes = [];
+    let animTimer = null;
+
+    let showBones = true;
+    let isExporting = false;
+
+    let isInteracting = false;
+    let drawStartPos = null;
+    let activeJointAction = null;
+    let texDragStart = null;
+
+    class Bone {
+      constructor(id, parentId, x, y, length, angle) {
+        this.id = id;
+        this.parentId = parentId;
+        this.x = x; 
+        this.y = y;
+        this.length = length;
+        this.angle = angle; 
+
+        this.worldX = 0;
+        this.worldY = 0;
+        this.worldAngle = 0;
+
+        this.baseImage = null;
+        this.gestures = [];
+        this.activeGestureId = null;
+
+        this.imgTransform = { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0, rotation: 0 };
+      }
+    }
+
+    function toggleBoneVisibility() {
+      showBones = !showBones;
+      document.getElementById('btn-toggle-bones').innerText = showBones ? "👁️ إخفاء الهيكل" : "👁️ إظهار الهيكل";
+      render();
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      document.querySelectorAll('header button').forEach(b => {
+        if (b.id.startsWith('btn-mode-')) b.classList.remove('active');
+      });
+      const targetBtn = document.getElementById(`btn-mode-${newMode}`);
+      if (targetBtn) targetBtn.classList.add('active');
+      render();
+    }
+
+    function updateTransforms() {
+      bones.forEach(bone => {
+        if (!bone.parentId) {
+          bone.worldX = bone.x;
+          bone.worldY = bone.y;
+          bone.worldAngle = bone.angle;
+        } else {
+          const parent = bones.find(b => b.id === bone.parentId);
+          if (parent) {
+            const rad = (parent.worldAngle * Math.PI) / 180;
+            const parentEndX = parent.worldX + Math.cos(rad) * parent.length;
+            const parentEndY = parent.worldY + Math.sin(rad) * parent.length;
+
+            bone.worldX = parentEndX + bone.x;
+            bone.worldY = parentEndY + bone.y;
+            bone.worldAngle = parent.worldAngle + bone.angle;
+          }
+        }
+      });
+    }
+
+    function render() {
+      if (!isInteracting) {
+        evaluateFrame(currentFrame);
+      }
+      updateTransforms();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawGrid();
+
+      // 1. Draw Textures / Gestures
+      bones.forEach(bone => {
+        let activeImageToDraw = null;
+
+        if (bone.activeGestureId) {
+          const gesture = bone.gestures.find(g => g.id === bone.activeGestureId);
+          if (gesture && gesture.frames.length > 0) {
+            const frameIdx = Math.floor((currentFrame * (gesture.fps / 15))) % gesture.frames.length;
+            activeImageToDraw = gesture.frames[frameIdx];
+          }
+        } else if (bone.baseImage) {
+          activeImageToDraw = bone.baseImage;
+        }
+
+        if (activeImageToDraw) {
+          ctx.save();
+          ctx.translate(bone.worldX, bone.worldY);
+          ctx.rotate((bone.worldAngle * Math.PI) / 180);
+
+          ctx.translate(bone.imgTransform.offsetX, bone.imgTransform.offsetY);
+          ctx.rotate((bone.imgTransform.rotation * Math.PI) / 180);
+          ctx.scale(bone.imgTransform.scaleX, bone.imgTransform.scaleY);
+
+          ctx.drawImage(activeImageToDraw, 0, -activeImageToDraw.height / 2);
+
+          // Texture Gizmo in Texture Mode
+          if (!isExporting && mode === 'texture' && bone.id === selectedBoneId) {
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(0, -activeImageToDraw.height / 2, activeImageToDraw.width, activeImageToDraw.height);
+            ctx.setLineDash([]);
+          }
+
+          ctx.restore();
+        }
+      });
+
+      // 2. Draw Skeleton
+      if (showBones && !isExporting) {
+        bones.forEach(bone => {
+          const rad = (bone.worldAngle * Math.PI) / 180;
+          const endX = bone.worldX + Math.cos(rad) * bone.length;
+          const endY = bone.worldY + Math.sin(rad) * bone.length;
+          const isSelected = bone.id === selectedBoneId;
+
+          ctx.beginPath();
+          ctx.moveTo(bone.worldX, bone.worldY);
+          ctx.lineTo(endX, endY);
+          ctx.lineWidth = isSelected ? 5 : 3;
+          ctx.strokeStyle = isSelected ? '#3b82f6' : '#94a3b8';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(bone.worldX, bone.worldY, 6, 0, Math.PI * 2);
+          ctx.fillStyle = !bone.parentId ? '#ef4444' : '#ffffff';
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? '#60a5fa' : '#38bdf8';
+          ctx.fill();
+        });
+      }
+
+      if (!isExporting && mode === 'draw' && isInteracting && drawStartPos) {
+        ctx.beginPath();
+        ctx.moveTo(drawStartPos.x, drawStartPos.y);
+        ctx.lineTo(drawStartPos.currentX, drawStartPos.currentY);
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = '#1a1c24';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+    }
+
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function distToSegment(p, v, w) {
+      const l2 = (w.x - v.x)**2 + (w.y - v.y)**2;
+      if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+      let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pos = getMousePos(e);
+      isInteracting = true;
+
+      if (mode === 'texture' && selectedBoneId) {
+        texDragStart = { x: pos.x, y: pos.y, shift: e.shiftKey };
+        return;
+      }
+
+      if (mode === 'draw') {
+        let clickedJoint = null;
+        for (let bone of bones) {
+          const rad = (bone.worldAngle * Math.PI) / 180;
+          const endX = bone.worldX + Math.cos(rad) * bone.length;
+          const endY = bone.worldY + Math.sin(rad) * bone.length;
+
+          if (Math.hypot(pos.x - endX, pos.y - endY) < 16) {
+            clickedJoint = { boneId: bone.id, x: endX, y: endY };
+            break;
+          }
+        }
+
+        drawStartPos = clickedJoint ? 
+          { parentId: clickedJoint.boneId, x: clickedJoint.x, y: clickedJoint.y, currentX: pos.x, currentY: pos.y } : 
+          { parentId: null, x: pos.x, y: pos.y, currentX: pos.x, currentY: pos.y };
+
+      } else {
+        selectedBoneId = null;
+        activeJointAction = null;
+
+        // 1. Check Joints
+        for (let bone of bones) {
+          const rad = (bone.worldAngle * Math.PI) / 180;
+          const endX = bone.worldX + Math.cos(rad) * bone.length;
+          const endY = bone.worldY + Math.sin(rad) * bone.length;
+
+          if (Math.hypot(pos.x - endX, pos.y - endY) < 16) {
+            selectedBoneId = bone.id;
+            activeJointAction = 'rotate';
+            break;
+          }
+          if (Math.hypot(pos.x - bone.worldX, pos.y - bone.worldY) < 16) {
+            selectedBoneId = bone.id;
+            activeJointAction = !bone.parentId ? 'move_root' : 'rotate';
+            break;
+          }
+        }
+
+        // 2. Check Bone Segments if no joint clicked
+        if (!selectedBoneId) {
+          for (let bone of bones) {
+            const rad = (bone.worldAngle * Math.PI) / 180;
+            const endX = bone.worldX + Math.cos(rad) * bone.length;
+            const endY = bone.worldY + Math.sin(rad) * bone.length;
+            
+            if (distToSegment(pos, { x: bone.worldX, y: bone.worldY }, { x: endX, y: endY }) < 14) {
+              selectedBoneId = bone.id;
+              activeJointAction = !bone.parentId ? 'move_root' : 'rotate';
+              break;
+            }
+          }
+        }
+
+        syncPanelUI();
+      }
+      render();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isInteracting) return;
+      const pos = getMousePos(e);
+
+      if (mode === 'texture' && selectedBoneId && texDragStart) {
+        const bone = bones.find(b => b.id === selectedBoneId);
+        if (!bone) return;
+
+        const dx = pos.x - texDragStart.x;
+        const dy = pos.y - texDragStart.y;
+
+        if (e.shiftKey) {
+          bone.imgTransform.rotation += dx * 0.5;
+        } else {
+          bone.imgTransform.offsetX += dx * 0.5;
+          bone.imgTransform.offsetY += dy * 0.5;
+        }
+        texDragStart = { x: pos.x, y: pos.y };
+        syncPanelUI();
+        autoSaveFrameIfKeyed();
+        render();
+        return;
+      }
+
+      if (mode === 'draw' && drawStartPos) {
+        drawStartPos.currentX = pos.x;
+        drawStartPos.currentY = pos.y;
+      } else if ((mode === 'pose' || mode === 'texture') && selectedBoneId) {
+        const bone = bones.find(b => b.id === selectedBoneId);
+        if (!bone) return;
+
+        if (activeJointAction === 'move_root' && !bone.parentId) {
+          bone.x = pos.x;
+          bone.y = pos.y;
+        } else if (activeJointAction === 'rotate' || activeJointAction === 'move_root') {
+          const dx = pos.x - bone.worldX;
+          const dy = pos.y - bone.worldY;
+          let worldAngle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+          if (bone.parentId) {
+            const parent = bones.find(b => b.id === bone.parentId);
+            bone.angle = worldAngle - parent.worldAngle;
+          } else {
+            bone.angle = worldAngle;
+          }
+        }
+        autoSaveFrameIfKeyed();
+      }
+      render();
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      if (mode === 'texture' && selectedBoneId) {
+        e.preventDefault();
+        const bone = bones.find(b => b.id === selectedBoneId);
+        if (!bone) return;
+        const delta = e.deltaY < 0 ? 0.05 : -0.05;
+        bone.imgTransform.scaleX = Math.max(0.1, bone.imgTransform.scaleX + delta);
+        bone.imgTransform.scaleY = Math.max(0.1, bone.imgTransform.scaleY + delta);
+        syncPanelUI();
+        autoSaveFrameIfKeyed();
+        render();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (mode === 'draw' && drawStartPos && isInteracting) {
+        const pos = getMousePos(e);
+        const dx = pos.x - drawStartPos.x;
+        const dy = pos.y - drawStartPos.y;
+        const len = Math.hypot(dx, dy);
+
+        if (len > 15) {
+          const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+          const newId = Date.now();
+          const parentBone = bones.find(b => b.id === drawStartPos.parentId);
+          const newBone = new Bone(
+            newId,
+            drawStartPos.parentId,
+            drawStartPos.parentId ? 0 : drawStartPos.x,
+            drawStartPos.parentId ? 0 : drawStartPos.y,
+            len,
+            drawStartPos.parentId ? angle - parentBone.worldAngle : angle
+          );
+          bones.push(newBone);
+          selectedBoneId = newId;
+          syncPanelUI();
+        }
+      }
+
+      isInteracting = false;
+      drawStartPos = null;
+      activeJointAction = null;
+      texDragStart = null;
+      render();
+    });
+
+    function uploadBoneImage(e) {
+      const file = e.target.files[0];
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) { alert("الرجاء اختيار عظمة أولاً لرفع الصورة إليها"); return; }
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          bone.baseImage = img;
+          bone.activeGestureId = null;
+          syncPanelUI();
+          render();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function createMultiFrameGesture(e) {
+      const files = Array.from(e.target.files);
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) { alert("الرجاء اختيار عظمة أولاً لربط الإيماءة المتتالية بها"); return; }
+      if (files.length === 0) return;
+
+      const loadedFrames = [];
+      let loadedCount = 0;
+
+      files.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            loadedFrames[index] = img;
+            loadedCount++;
+            if (loadedCount === files.length) {
+              const gestureId = 'gest_' + Date.now();
+              const newGesture = {
+                id: gestureId,
+                name: `إيماءة (${files.length} صور)`,
+                frames: loadedFrames,
+                fps: 10
+              };
+              bone.gestures.push(newGesture);
+              bone.activeGestureId = gestureId;
+              autoSaveFrameIfKeyed();
+              syncPanelUI();
+              render();
+            }
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function updateGestureSpeed() {
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone || !bone.activeGestureId) return;
+      const gesture = bone.gestures.find(g => g.id === bone.activeGestureId);
+      if (gesture) {
+        gesture.fps = parseInt(document.getElementById('gestureFps').value);
+        autoSaveFrameIfKeyed();
+        render();
+      }
+    }
+
+    function renderGestureList() {
+      const list = document.getElementById('gestureList');
+      const speedContainer = document.getElementById('gesture-speed-container');
+      list.innerHTML = '';
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) { speedContainer.style.display = 'none'; return; }
+
+      const activeGesture = bone.gestures.find(g => g.id === bone.activeGestureId);
+      if (activeGesture) {
+        speedContainer.style.display = 'flex';
+        document.getElementById('gestureFps').value = activeGesture.fps || 10;
+      } else {
+        speedContainer.style.display = 'none';
+      }
+
+      const noneItem = document.createElement('div');
+      noneItem.className = `gesture-card ${!bone.activeGestureId ? 'selected' : ''}`;
+      noneItem.innerHTML = `<span>🖼️ الصورة الأساسية / بدون إيماءة</span>`;
+      noneItem.onclick = () => {
+        bone.activeGestureId = null;
+        autoSaveFrameIfKeyed();
+        syncPanelUI();
+        render();
+      };
+      list.appendChild(noneItem);
+
+      bone.gestures.forEach(g => {
+        const item = document.createElement('div');
+        item.className = `gesture-card ${g.id === bone.activeGestureId ? 'selected' : ''}`;
+        
+        let thumbsHTML = '<div class="gesture-preview-thumbs">';
+        g.frames.slice(0, 3).forEach(f => { thumbsHTML += `<img src="${f.src}">`; });
+        thumbsHTML += '</div>';
+
+        item.innerHTML = `<span>${g.name} (${g.fps || 10} FPS)</span>${thumbsHTML}`;
+        item.onclick = () => {
+          bone.activeGestureId = g.id;
+          autoSaveFrameIfKeyed();
+          syncPanelUI();
+          render();
+        };
+        list.appendChild(item);
+      });
+    }
+
+    function syncPanelUI() {
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) {
+        document.getElementById('panel-title').innerText = "اختر عظمة للتعديل";
+        renderGestureList();
+        return;
+      }
+      document.getElementById('panel-title').innerText = `العظمة المحددة #${bone.id}`;
+      document.getElementById('texScaleX').value = bone.imgTransform.scaleX;
+      document.getElementById('texScaleY').value = bone.imgTransform.scaleY;
+      document.getElementById('texOffX').value = bone.imgTransform.offsetX;
+      document.getElementById('texOffY').value = bone.imgTransform.offsetY;
+      document.getElementById('texRot').value = bone.imgTransform.rotation;
+      renderGestureList();
+    }
+
+    function updateTex() {
+      const bone = bones.find(b => b.id === selectedBoneId);
+      if (!bone) return;
+      bone.imgTransform.scaleX = parseFloat(document.getElementById('texScaleX').value);
+      bone.imgTransform.scaleY = parseFloat(document.getElementById('texScaleY').value);
+      bone.imgTransform.offsetX = parseFloat(document.getElementById('texOffX').value);
+      bone.imgTransform.offsetY = parseFloat(document.getElementById('texOffY').value);
+      bone.imgTransform.rotation = parseFloat(document.getElementById('texRot').value);
+      autoSaveFrameIfKeyed();
+      render();
+    }
+
+    function deleteSelectedBone() {
+      if (!selectedBoneId) return;
+      const toDelete = new Set([selectedBoneId]);
+      let added = true;
+      while (added) {
+        added = false;
+        bones.forEach(b => {
+          if (b.parentId && toDelete.has(b.parentId) && !toDelete.has(b.id)) {
+            toDelete.add(b.id);
+            added = true;
+          }
+        });
+      }
+      bones = bones.filter(b => !toDelete.has(b.id));
+      selectedBoneId = null;
+      syncPanelUI();
+      render();
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function saveKeyframe() {
+      const state = {};
+      bones.forEach(b => {
+        state[b.id] = {
+          x: b.x, y: b.y, angle: b.angle,
+          activeGestureId: b.activeGestureId,
+          imgTransform: { ...b.imgTransform }
+        };
+      });
+      keyframes = keyframes.filter(k => k.frame !== currentFrame);
+      keyframes.push({ frame: currentFrame, states: state });
+      keyframes.sort((a, b) => a.frame - b.frame);
+      renderTimelineTrack();
+    }
+
+    function deleteKeyframe() {
+      keyframes = keyframes.filter(k => k.frame !== currentFrame);
+      renderTimelineTrack();
+      render();
+    }
+
+    function autoSaveFrameIfKeyed() {
+      if (keyframes.some(k => k.frame === currentFrame)) {
+        saveKeyframe();
+      }
+    }
+
+    function evaluateFrame(frame) {
+      if (keyframes.length === 0) return;
+      let prev = keyframes[0], next = keyframes[keyframes.length - 1];
+
+      for (let i = 0; i < keyframes.length; i++) {
+        if (keyframes[i].frame <= frame) prev = keyframes[i];
+        if (keyframes[i].frame >= frame) { next = keyframes[i]; break; }
+      }
+
+      if (prev.frame === next.frame) {
+        applySnapshot(prev.states);
+      } else {
+        const factor = (frame - prev.frame) / (next.frame - prev.frame);
+        bones.forEach(b => {
+          const s1 = prev.states[b.id];
+          const s2 = next.states[b.id];
+          if (s1 && s2) {
+            b.x = lerp(s1.x, s2.x, factor);
+            b.y = lerp(s1.y, s2.y, factor);
+            b.angle = lerp(s1.angle, s2.angle, factor);
+
+            b.imgTransform.scaleX = lerp(s1.imgTransform.scaleX, s2.imgTransform.scaleX, factor);
+            b.imgTransform.scaleY = lerp(s1.imgTransform.scaleY, s2.imgTransform.scaleY, factor);
+            b.imgTransform.offsetX = lerp(s1.imgTransform.offsetX, s2.imgTransform.offsetX, factor);
+            b.imgTransform.offsetY = lerp(s1.imgTransform.offsetY, s2.imgTransform.offsetY, factor);
+            b.imgTransform.rotation = lerp(s1.imgTransform.rotation, s2.imgTransform.rotation, factor);
+
+            b.activeGestureId = s1.activeGestureId;
+          }
+        });
+      }
+    }
+
+    function applySnapshot(states) {
+      bones.forEach(b => {
+        if (states[b.id]) {
+          b.x = states[b.id].x;
+          b.y = states[b.id].y;
+          b.angle = states[b.id].angle;
+          b.activeGestureId = states[b.id].activeGestureId;
+          b.imgTransform = { ...states[b.id].imgTransform };
+        }
+      });
+    }
+
+    function scrubTimeline(e) {
+      const rect = document.getElementById('timeline-track').getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      currentFrame = Math.max(0, Math.min(100, Math.round((clickX / rect.width) * 100)));
+      updateTimelineUI();
+      render();
+    }
+
+    function updateTimelineUI() {
+      document.getElementById('lbl-frame').innerText = currentFrame;
+      document.getElementById('scrubber-line').style.left = `${currentFrame}%`;
+    }
+
+    function renderTimelineTrack() {
+      const track = document.getElementById('timeline-track');
+      track.querySelectorAll('.kf-node').forEach(n => n.remove());
+      keyframes.forEach(k => {
+        const node = document.createElement('div');
+        node.className = 'kf-node';
+        node.style.left = `${k.frame}%`;
+        track.appendChild(node);
+      });
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل";
+
+      if (isPlaying) {
+        animTimer = setInterval(() => {
+          currentFrame = (currentFrame + 1) % 101;
+          updateTimelineUI();
+          render();
+        }, 1000 / 30);
+      } else {
+        clearInterval(animTimer);
+      }
+    }
+
+    function clearAll() {
+      bones = [];
+      keyframes = [];
+      selectedBoneId = null;
+      currentFrame = 0;
+      updateTimelineUI();
+      renderTimelineTrack();
+      syncPanelUI();
+      render();
+    }
+
+    function exportVideo() {
+      if (keyframes.length < 2) {
+        alert("يرجى إضافة إطارين مفتاحيين على الأقل لتصدير الحركة.");
+        return;
+      }
+
+      isExporting = true;
+      render();
+
+      const stream = canvas.captureStream(30);
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks = [];
+
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `skeleton_animation_${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        isExporting = false;
+        render();
+      };
+
+      currentFrame = 0;
+      recorder.start();
+
+      const recordInterval = setInterval(() => {
+        currentFrame++;
+        updateTimelineUI();
+        render();
+
+        if (currentFrame >= 100) {
+          clearInterval(recordInterval);
+          recorder.stop();
+        }
+      }, 1000 / 30);
+    }
+
+    render();
+  </script>
+</body>
+</html>
