@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Upload Studio - Semantic Animation Pro</title>
+  <title>Twencraft Upload Studio - Pro Hierarchical Animation</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -71,10 +71,12 @@
           <label style="color:#60a5fa; font-weight:bold;">دور العظمة:</label>
           <select id="bone-role-select" onchange="updateBoneRole(this.value)">
             <option value="none">بدون دور</option>
-            <option value="torso">الجذع (Torso)</option>
+            <option value="torso">الجذع (Torso - الأب الأساسي)</option>
+            <option value="chest">الصدر (Chest)</option>
+            <option value="neck">الرقبة (Neck)</option>
             <option value="head">الرأس (Head)</option>
-            <option value="arm_r">اليد اليمنى (Right Arm)</option>
-            <option value="arm_l">اليد اليسرى (Left Arm)</option>
+            <option value="arm_r">الكتف/اليد اليمنى (Right Arm)</option>
+            <option value="arm_l">الكتف/اليد اليسرى (Left Arm)</option>
             <option value="leg_r">الرجل اليمنى (Right Leg)</option>
             <option value="leg_l">الرجل اليسرى (Left Leg)</option>
           </select>
@@ -146,7 +148,7 @@
       constructor(id, parentId, x, y, length, angle) {
         this.id = id;
         this.parentId = parentId;
-        this.role = "none"; // دور العظمة الدلالي الجديد
+        this.role = "none"; 
         this.x = x; 
         this.y = y;
         this.length = length;
@@ -179,13 +181,12 @@
     }
 
     async function loadAnimationLibrary() {
-      // حركات تجريبية مدمجة تدعم الأدوار الدلالية (Semantic Roles) لضمان العمل الفوري
       const sampleAnims = {
         "animations/idle.json": {
           keyframes: [
-            { frame: 0, states: { torso: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } },
-            { frame: 50, states: { torso: {angle:2}, head: {angle:-3}, arm_r: {angle:22}, arm_l: {angle:-8} } },
-            { frame: 100, states: { torso: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } }
+            { frame: 0, states: { torso: {angle:0}, chest: {angle:0}, neck: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } },
+            { frame: 50, states: { torso: {angle:2}, chest: {angle:-1}, neck: {angle:3}, head: {angle:5}, arm_r: {angle:22}, arm_l: {angle:-8} } },
+            { frame: 100, states: { torso: {angle:0}, chest: {angle:0}, neck: {angle:0}, head: {angle:0}, arm_r: {angle:15}, arm_l: {angle:-15} } }
           ]
         },
         "animations/wave.json": {
@@ -201,7 +202,7 @@
 
       const anims = [
         { name: "وضعيات الاسترخاء (Idle)", file: "animations/idle.json", inline: sampleAnims["animations/idle.json"] },
-        { name: "تلويح باليد (Wave)", file: "animations/wave.json", inline: sampleAnims["animations/wave.json"] }
+        { name: "تلويح باليد ورأس (Wave)", file: "animations/wave.json", inline: sampleAnims["animations/wave.json"] }
       ];
       
       const box = document.getElementById('anim-library');
@@ -212,11 +213,9 @@
       `).join('');
     }
 
-    // تطبيق الحركة بناءً على الأدوار الدلالية (Semantic Matching)
     function applySemanticAnimation(animData) {
       if (!animData || !animData.keyframes) return;
       
-      // تحويل مفاتيح الحركات من الأدوار (مثل torso) إلى المعارف الحالية (IDs) للهيكل
       keyframes = animData.keyframes.map(kf => {
         const newStates = {};
         for (let role in kf.states) {
@@ -306,11 +305,11 @@
         })),
         keyframes: keyframes
       };
-      localStorage.setItem('twencraft_studio_save_v6', JSON.stringify(data));
+      localStorage.setItem('twencraft_studio_save_v7', JSON.stringify(data));
     }
 
     function loadAutoSave() {
-      const saved = localStorage.getItem('twencraft_studio_save_v6');
+      const saved = localStorage.getItem('twencraft_studio_save_v7');
       if (!saved) return;
       const data = JSON.parse(saved);
       keyframes = data.keyframes || [];
@@ -348,6 +347,7 @@
       render();
     }
 
+    // محرك حساب التسلسل الهرمي (Forward Kinematics Engine)
     function updateBoneWorld(bone) {
       if (bone._updated) return;
       if (bone.parentId) {
@@ -665,7 +665,7 @@
       } else clearInterval(animTimer);
     }
 
-    function clearAll() { bones = []; keyframes = []; bgImage = null; bgImageSrc = null; localStorage.removeItem('twencraft_studio_save_v6'); renderTimelineTrack(); render(); }
+    function clearAll() { bones = []; keyframes = []; bgImage = null; bgImageSrc = null; localStorage.removeItem('twencraft_studio_save_v7'); renderTimelineTrack(); render(); }
     window.addEventListener('DOMContentLoaded', () => { loadLibrary(); loadAnimationLibrary(); loadAutoSave(); });
   </script>
 </body>
