@@ -423,7 +423,15 @@
       for (let b of scene.bones) {
         const rad = (b.worldAngle * Math.PI) / 180;
         const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
-        if (Math.hypot(pos.x - eX, pos.y - eY) < 25) return { id: b.id, x: eX, y: eY };
+        
+        // 1. الالتقاط من نهاية العظمة (النقطة البيضاء) -> الأب هو هذه العظمة
+        if (Math.hypot(pos.x - eX, pos.y - eY) < 25) {
+          return { id: b.id, x: eX, y: eY, type: 'tip' };
+        }
+        // 2. الالتقاط من بداية العظمة (النقطة الحمراء) -> الأب هو أبو هذه العظمة
+        if (Math.hypot(pos.x - b.worldX, pos.y - b.worldY) < 25) {
+          return { id: b.parentId, x: b.worldX, y: b.worldY, type: 'base' };
+        }
       }
       return null;
     }
@@ -435,9 +443,13 @@
 
       if (mode === 'draw') {
         const boneType = document.getElementById('draw-bone-type').value;
-        // عظمة جذر لا ترتبط أبداً، عظمة عادية تبحث عن ارتباط
         const snap = (boneType === 'normal') ? getSnap(mousePos) : null;
-        drawStartPos = snap ? { pid: snap.id, x: snap.x, y: snap.y } : { pid: null, x: mousePos.x, y: mousePos.y };
+        
+        if (snap) {
+          drawStartPos = { pid: snap.id, x: snap.x, y: snap.y };
+        } else {
+          drawStartPos = { pid: null, x: mousePos.x, y: mousePos.y };
+        }
       } else {
         selectedBoneId = null;
         for (let b of scene.bones) {
@@ -534,8 +546,11 @@
           ctx.beginPath(); ctx.moveTo(b.worldX, b.worldY); ctx.lineTo(eX, eY);
           ctx.lineWidth = isSel ? 4 : 2; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.4)'; ctx.stroke();
           
+          // نقطة بداية العظمة (الجذر/القاعدة) - حمراء إذا لم يكن لها أب
           ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 5, 0, Math.PI*2);
           ctx.fillStyle = !b.parentId ? '#ef4444' : '#fff'; ctx.fill();
+          
+          // نقطة نهاية العظمة (الرأس/المفصل) - بيضاء
           ctx.beginPath(); ctx.arc(eX, eY, 4, 0, Math.PI*2);
           ctx.fillStyle = isSel ? '#60a5fa' : '#94a3b8'; ctx.fill();
         });
@@ -816,7 +831,7 @@
       const scene = getCurrentScene();
       const ids = new Set([selectedBoneId]); let add = true;
       while(add){ add=false; scene.bones.forEach(b=>{if(ids.has(b.parentId)&&!ids.has(b.id)){ids.add(b.id);add=true;}}); }
-      scene.bones = scene.bones.filter(b=>!ids.has(b.id));
+      scene.bones = scene.bones.File ? scene.bones.filter(b=>!ids.has(b.id)) : scene.bones.filter(b=>!ids.has(b.id));
       selectedBoneId=null; document.getElementById('selected-bone-panel').style.display='none';
       saveProjectState();
     }
