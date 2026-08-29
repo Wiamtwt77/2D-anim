@@ -210,11 +210,11 @@
 
   <script>
     // إعدادات اتصال Supabase (آمنة لا تكسر التطبيق إن لم تكتمل)
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const SUPABASE_URL = 'https://suljseyxbokiuxphuvoo.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_DWd_wSZa19_tOTIJBVtAcg_twD7APcf';
     let supabaseClient = null;
     try {
-      if (SUPABASE_URL && SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+      if (SUPABASE_URL && SUPABASE_URL !== 'https://suljseyxbokiuxphuvoo.supabase.co') {
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }
     } catch(err) {
