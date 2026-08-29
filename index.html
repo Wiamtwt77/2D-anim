@@ -52,6 +52,10 @@
     <div class="tool-group">
       <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك المفاصل</button>
       <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم العظام</button>
+      <select id="draw-bone-type" title="نوع العظمة عند الرسم">
+        <option value="normal">🔗 عظمة عادية (تتصل)</option>
+        <option value="root">🌟 عظمة جذر (مستقلة)</option>
+      </select>
       <button onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
     </div>
     
@@ -178,7 +182,6 @@
     let mode = 'pose';
     let showBones = true;
     
-    // Scene Manager State
     let scenes = [
       { id: 'scene_1', title: 'المشهد الأول 🎬', duration: 120, bgImgSrc: null, bones: [], keyframes: [], expressionClips: [], audioClips: [] }
     ];
@@ -210,7 +213,7 @@
         this.baseImage = null;
         this.imgW = 100; this.imgH = 100;
         this.imgOffX = 0; this.imgOffY = 0;
-        this.imgAngle = 0; // Sprite Independent Rotation
+        this.imgAngle = 0;
         this.expressions = {};
         this.activeExpression = "default";
       }
@@ -220,7 +223,6 @@
       return scenes.find(s => s.id === currentSceneId) || scenes[0];
     }
 
-    // --- Storage ---
     function saveProjectState() {
       const scene = getCurrentScene();
       scene.duration = maxFrames;
@@ -268,7 +270,6 @@
       }
     }
 
-    // --- Scene Manager & Sequential Playback ---
     function renderScenesList() {
       const list = document.getElementById('scenes-list');
       list.innerHTML = '';
@@ -301,7 +302,6 @@
       saveProjectState();
     }
 
-    // --- Robust FK Engine ---
     function updateTransforms() {
       const scene = getCurrentScene();
       scene.bones.forEach(b => b._updated = false);
@@ -319,7 +319,7 @@
           bone.worldY = parent.worldY + Math.sin(parentRad) * parent.length;
           bone.worldAngle = parent.worldAngle + bone.angle;
         } else {
-          bone.parentId = null; // Fallback if parent was deleted
+          bone.parentId = null;
           bone.worldX = bone.x; bone.worldY = bone.y; bone.worldAngle = bone.angle;
         }
       } else {
@@ -328,7 +328,6 @@
       bone._updated = true;
     }
 
-    // --- 60FPS Engine with Sequential Scene Flow ---
     function engineLoop(timestamp) {
       if (!lastTimestamp) lastTimestamp = timestamp;
       const dt = (timestamp - lastTimestamp) / 1000;
@@ -338,7 +337,6 @@
         currentFrame += dt * playSpeed;
         const currentScene = getCurrentScene();
         if (currentFrame > maxFrames) {
-          // Sequential transition to next scene!
           const currentIndex = scenes.findIndex(s => s.id === currentSceneId);
           if (currentIndex < scenes.length - 1) {
             currentSceneId = scenes[currentIndex + 1].id;
@@ -348,7 +346,6 @@
             renderScenesList();
             updateTimelineScale();
           } else {
-            // Loop back to first scene
             currentSceneId = scenes[0].id;
             maxFrames = getCurrentScene().duration;
             document.getElementById('max-frames').value = maxFrames;
@@ -416,7 +413,6 @@
       });
     }
 
-    // --- Interactive Grabbing ---
     function getMouse(e) {
       const rect = canvas.getBoundingClientRect();
       return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
@@ -438,7 +434,9 @@
       const scene = getCurrentScene();
 
       if (mode === 'draw') {
-        const snap = getSnap(mousePos);
+        const boneType = document.getElementById('draw-bone-type').value;
+        // عظمة جذر لا ترتبط أبداً، عظمة عادية تبحث عن ارتباط
+        const snap = (boneType === 'normal') ? getSnap(mousePos) : null;
         drawStartPos = snap ? { pid: snap.id, x: snap.x, y: snap.y } : { pid: null, x: mousePos.x, y: mousePos.y };
       } else {
         selectedBoneId = null;
@@ -456,7 +454,8 @@
     canvas.addEventListener('mousemove', (e) => {
       mousePos = getMouse(e);
       const scene = getCurrentScene();
-      snapIndicator = (mode === 'draw' && !isInteracting) ? getSnap(mousePos) : null;
+      const boneType = document.getElementById('draw-bone-type')?.value || 'normal';
+      snapIndicator = (mode === 'draw' && !isInteracting && boneType === 'normal') ? getSnap(mousePos) : null;
 
       if (isInteracting && mode === 'pose' && selectedBoneId) {
         const bone = scene.bones.find(b => b.id === selectedBoneId);
@@ -493,7 +492,6 @@
       }
     });
 
-    // --- Rendering Stage ---
     let bgImgObj = null;
     function drawStage() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -521,7 +519,7 @@
           ctx.translate(b.worldX, b.worldY);
           ctx.rotate((b.worldAngle * Math.PI) / 180);
           ctx.translate(b.imgOffX, b.imgOffY);
-          ctx.rotate((b.imgAngle * Math.PI) / 180); // Independent Sprite Rotation
+          ctx.rotate((b.imgAngle * Math.PI) / 180);
           ctx.drawImage(img, -b.imgW/2, -b.imgH/2, b.imgW, b.imgH);
           ctx.restore();
         }
@@ -553,7 +551,6 @@
       }
     }
 
-    // --- UI & Parent Linking ---
     function syncUI() {
       const scene = getCurrentScene();
       const b = scene.bones.find(x => x.id === selectedBoneId);
@@ -563,9 +560,8 @@
       document.getElementById('texOffX').value = b.imgOffX; document.getElementById('texOffY').value = b.imgOffY;
       document.getElementById('texAngle').value = b.imgAngle;
 
-      // Populate Parent Dropdown
       const parentSel = document.getElementById('bone-parent-select');
-      parentSel.innerHTML = '<option value="">(بدون أب - عظمة رئيسية)</option>';
+      parentSel.innerHTML = '<option value="">(بدون أب - عظمة جذر)</option>';
       scene.bones.forEach(other => {
         if(other.id !== b.id) {
           parentSel.innerHTML += `<option value="${other.id}" ${other.id === b.parentId ? 'selected' : ''}>${other.id}</option>`;
@@ -646,7 +642,6 @@
       saveProjectState();
     }
 
-    // --- Keyframes & Copy/Paste ---
     function saveKeyframe() {
       const scene = getCurrentScene();
       const state = {};
@@ -705,7 +700,6 @@
       saveProjectState();
     }
 
-    // --- Audio & Expression Tracks ---
     async function recordAudioClip() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -761,8 +755,6 @@
       });
     }
 
-    // --- Dragging & Scrubbing ---
-    function startScrubbing(e) { isScrubbing = true; scrubTo(e); }
     window.addEventListener('mousemove', e => {
       if (isScrubbing) scrubTo(e);
       if (draggingAudioId) {
@@ -786,6 +778,7 @@
     });
     window.addEventListener('mouseup', () => { isScrubbing = false; draggingAudioId = null; draggingExprClipId = null; saveProjectState(); });
 
+    function startScrubbing(e) { isScrubbing = true; scrubTo(e); }
     function scrubTo(e) {
       const rect = document.getElementById('main-track').getBoundingClientRect();
       let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
