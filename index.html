@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Studio - Free Rigging Edition</title>
+  <title>Twencraft Studio - True Free Joint Network</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0a0b0e; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -21,7 +21,6 @@
     .canvas-container { flex: 1; background: #050608; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 10px; }
     canvas { background: #0e1017; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); cursor: crosshair; }
 
-    /* Sidebar & Properties Studio */
     .sidebar { width: 320px; background: #14161f; border-left: 1px solid #1f2333; display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto; z-index: 20; }
     .sidebar h4 { font-size: 12px; color: #60a5fa; border-bottom: 1px solid #1f2333; padding-bottom: 4px; margin-top: 4px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px; }
@@ -29,7 +28,6 @@
     .scene-card { background: #1a1e2c; padding: 8px; border-radius: 6px; border: 1px solid #30364f; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; cursor: pointer; }
     .scene-card.active { border-color: #3b82f6; background: #22283d; }
 
-    /* Director Timeline */
     .director-panel { height: 210px; background: #14161f; border-top: 1px solid #1f2333; padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
     .timeline-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
     
@@ -50,9 +48,9 @@
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك ومفاصل</button>
-      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم حر</button>
-      <button onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك المفاصل</button>
+      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم حر ومشبكي</button>
+      <button onclick="toggleBoneVisibility()">👁️ إخفاء الشبكة</button>
     </div>
     
     <div class="tool-group">
@@ -65,7 +63,7 @@
     </div>
 
     <div class="tool-group">
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
+      <button class="danger" onclick="deleteSelectedElement()">🗑️ حذف المحدد</button>
       <button onclick="clearLocalStorageData()" style="background:#334155; font-size:11px;">🔄 إعادة ضبط</button>
     </div>
   </header>
@@ -81,13 +79,9 @@
       <div id="scenes-list"></div>
       <button onclick="addNewScene()" class="accent" style="width:100%;">➕ إضافة مشهد جديد</button>
 
-      <div id="selected-bone-panel" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
-        <h4 id="panel-title">خصائص العظمة والسبرايت</h4>
+      <div id="selected-panel" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
+        <h4 id="panel-title">خصائص العنصر المحدد</h4>
         
-        <div class="field"><label>العظمة الأب (Parent):</label>
-          <select id="bone-parent-select" onchange="changeBoneParent()"></select>
-        </div>
-
         <button onclick="document.getElementById('bone-img-file').click()">📁 رفع صورة أساسية (Sprite)</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
@@ -179,11 +173,12 @@
     let showBones = true;
     
     let scenes = [
-      { id: 'scene_1', title: 'المشهد الأول 🎬', duration: 120, bgImgSrc: null, bones: [], keyframes: [], expressionClips: [], audioClips: [] }
+      { id: 'scene_1', title: 'المشهد الأول 🎬', duration: 120, bgImgSrc: null, joints: [], bones: [], keyframes: [], expressionClips: [], audioClips: [] }
     ];
     let currentSceneId = 'scene_1';
 
     let selectedBoneId = null;
+    let selectedJointId = null;
     let currentFrame = 0;
     let maxFrames = 120;
     let playSpeed = 30;
@@ -193,19 +188,23 @@
 
     let isInteracting = false;
     let isScrubbing = false;
-    let drawStartPos = null;
-    let drawParentId = null;
+    let drawStartJoint = null;
     let mousePos = { x: 0, y: 0 };
     let draggingAudioId = null;
     let audioDragStartX = 0;
     let draggingExprClipId = null;
     let exprDragStartX = 0;
+    let draggingJointId = null;
+
+    class Joint {
+      constructor(id, x, y) {
+        this.id = id; this.x = x; this.y = y;
+      }
+    }
 
     class Bone {
-      constructor(id, parentId, x, y, length, angle) {
-        this.id = id; this.parentId = parentId;
-        this.x = x; this.y = y; this.length = length; this.angle = angle;
-        this.worldX = 0; this.worldY = 0; this.worldAngle = 0; this._updated = false;
+      constructor(id, j1Id, j2Id) {
+        this.id = id; this.j1Id = j1Id; this.j2Id = j2Id;
         this.baseImage = null;
         this.imgW = 100; this.imgH = 100;
         this.imgOffX = 0; this.imgOffY = 0;
@@ -222,11 +221,11 @@
     function saveProjectState() {
       const scene = getCurrentScene();
       scene.duration = maxFrames;
-      localStorage.setItem('twencraft_free_rig_project', JSON.stringify({ scenes, currentSceneId }));
+      localStorage.setItem('twencraft_joint_network_project', JSON.stringify({ scenes, currentSceneId }));
     }
 
     function loadProjectState() {
-      const saved = localStorage.getItem('twencraft_free_rig_project');
+      const saved = localStorage.getItem('twencraft_joint_network_project');
       if (!saved) return;
       try {
         const data = JSON.parse(saved);
@@ -235,8 +234,9 @@
             id: sd.id, title: sd.title, duration: sd.duration || 120,
             bgImgSrc: sd.bgImgSrc, keyframes: sd.keyframes || [],
             expressionClips: sd.expressionClips || [], audioClips: sd.audioClips || [],
+            joints: (sd.joints || []).map(jd => new Joint(jd.id, jd.x, jd.y)),
             bones: (sd.bones || []).map(bd => {
-              let b = new Bone(bd.id, bd.parentId, bd.x, bd.y, bd.length, bd.angle);
+              let b = new Bone(bd.id, bd.j1Id, bd.j2Id);
               b.imgW = bd.imgW; b.imgH = bd.imgH; b.imgOffX = bd.imgOffX; b.imgOffY = bd.imgOffY;
               b.imgAngle = bd.imgAngle || 0;
               b.activeExpression = bd.activeExpression || "default";
@@ -261,7 +261,7 @@
 
     function clearLocalStorageData() {
       if(confirm("هل تريد إعادة ضبط المشروع بالكامل؟")) {
-        localStorage.removeItem('twencraft_free_rig_project');
+        localStorage.removeItem('twencraft_joint_network_project');
         location.reload();
       }
     }
@@ -269,7 +269,7 @@
     function renderScenesList() {
       const list = document.getElementById('scenes-list');
       list.innerHTML = '';
-      scenes.forEach((s, idx) => {
+      scenes.forEach((s) => {
         const div = document.createElement('div');
         div.className = `scene-card ${s.id === currentSceneId ? 'active' : ''}`;
         div.innerHTML = `<span>🎬 ${s.title}</span> <span style="font-size:10px; color:#94a3b8;">${s.duration} إطار</span>`;
@@ -280,7 +280,7 @@
 
     function addNewScene() {
       const id = 'scene_' + Date.now();
-      scenes.push({ id, title: `مشهد ${scenes.length + 1}`, duration: 120, bgImgSrc: null, bones: [], keyframes: [], expressionClips: [], audioClips: [] });
+      scenes.push({ id, title: `مشهد ${scenes.length + 1}`, duration: 120, bgImgSrc: null, joints: [], bones: [], keyframes: [], expressionClips: [], audioClips: [] });
       switchScene(id);
       saveProjectState();
     }
@@ -292,36 +292,11 @@
       document.getElementById('max-frames').value = maxFrames;
       currentFrame = 0;
       selectedBoneId = null;
-      document.getElementById('selected-bone-panel').style.display = 'none';
+      selectedJointId = null;
+      document.getElementById('selected-panel').style.display = 'none';
       renderScenesList();
       updateTimelineScale();
       saveProjectState();
-    }
-
-    function updateTransforms() {
-      const scene = getCurrentScene();
-      scene.bones.forEach(b => b._updated = false);
-      scene.bones.forEach(b => calculateWorld(b, scene.bones));
-    }
-
-    function calculateWorld(bone, bonesList) {
-      if (bone._updated) return;
-      if (bone.parentId) {
-        const parent = bonesList.find(b => b.id === bone.parentId);
-        if (parent) {
-          calculateWorld(parent, bonesList);
-          const parentRad = (parent.worldAngle * Math.PI) / 180;
-          bone.worldX = parent.worldX + Math.cos(parentRad) * parent.length;
-          bone.worldY = parent.worldY + Math.sin(parentRad) * parent.length;
-          bone.worldAngle = parent.worldAngle + bone.angle;
-        } else {
-          bone.parentId = null;
-          bone.worldX = bone.x; bone.worldY = bone.y; bone.worldAngle = bone.angle;
-        }
-      } else {
-        bone.worldX = bone.x; bone.worldY = bone.y; bone.worldAngle = bone.angle;
-      }
-      bone._updated = true;
     }
 
     function engineLoop(timestamp) {
@@ -353,7 +328,6 @@
         updateUIProgress();
       }
       
-      updateTransforms();
       drawStage();
       requestAnimationFrame(engineLoop);
     }
@@ -387,23 +361,15 @@
 
       const easingType = document.getElementById('easing-select').value;
 
-      scene.bones.forEach(b => {
-        const s1 = kf1.states[b.id], s2 = kf2.states[b.id];
+      scene.joints.forEach(j => {
+        const s1 = kf1.joints[j.id], s2 = kf2.joints[j.id];
         if (s1 && s2 && kf1.frame !== kf2.frame) {
           const t = Math.max(0, Math.min(1, (frame - kf1.frame) / (kf2.frame - kf1.frame)));
           const smoothT = applyEasing(t, easingType);
-          
-          if (!b.parentId) {
-            b.x = s1.x + (s2.x - s1.x) * smoothT;
-            b.y = s1.y + (s2.y - s1.y) * smoothT;
-          }
-          let dAngle = s2.angle - s1.angle;
-          while(dAngle > 180) dAngle -= 360;
-          while(dAngle < -180) dAngle += 360;
-          b.angle = s1.angle + dAngle * smoothT;
+          j.x = s1.x + (s2.x - s1.x) * smoothT;
+          j.y = s1.y + (s2.y - s1.y) * smoothT;
         } else if (s1) {
-          if (!b.parentId) { b.x = s1.x; b.y = s1.y; }
-          b.angle = s1.angle;
+          j.x = s1.x; j.y = s1.y;
         }
       });
     }
@@ -419,53 +385,54 @@
       const scene = getCurrentScene();
 
       if (mode === 'draw') {
-        // فحص ما إذا كان البداية قريبة من أي مفصل أو نهاية عظمة للربط التلقائي الحر
-        drawParentId = null;
-        let startX = mousePos.x;
-        let startY = mousePos.y;
+        // البحث عن مفصل قريب للبدء منه، أو إنشاء مفصل جديد حر تماماً
+        let foundJoint = scene.joints.find(j => Math.hypot(mousePos.x - j.x, mousePos.y - j.y) < 18);
+        if (!foundJoint) {
+          foundJoint = new Joint('j_' + Date.now(), mousePos.x, mousePos.y);
+          scene.joints.push(foundJoint);
+        }
+        drawStartJoint = foundJoint;
+      } else {
+        // وضع التحريك: فحص هل ضغطنا على مفصل أو عظمة
+        selectedBoneId = null;
+        selectedJointId = null;
+
+        for (let j of scene.joints) {
+          if (Math.hypot(mousePos.x - j.x, mousePos.y - j.y) < 18) {
+            selectedJointId = j.id;
+            draggingJointId = j.id;
+            syncUI();
+            return;
+          }
+        }
 
         for (let b of scene.bones) {
-          const rad = (b.worldAngle * Math.PI) / 180;
-          const eX = b.worldX + Math.cos(rad) * b.length;
-          const eY = b.worldY + Math.sin(rad) * b.length;
-
-          // إذا بدأنا الرسم قرب نهاية عظمة، نربطها تلقائياً بها
-          if (Math.hypot(mousePos.x - eX, mousePos.y - eY) < 20) {
-            drawParentId = b.id;
+          const j1 = scene.joints.find(j => j.id === b.j1Id);
+          const j2 = scene.joints.find(j => j.id === b.j2Id);
+          if (!j1 || !j2) continue;
+          // فحص المسافة لخط العظمة
+          const midX = (j1.x + j2.x) / 2, midY = (j1.y + j2.y) / 2;
+          if (Math.hypot(mousePos.x - midX, mousePos.y - midY) < 25) {
+            selectedBoneId = b.id;
+            syncUI();
             break;
           }
         }
-        drawStartPos = { x: startX, y: startY };
-      } else {
-        selectedBoneId = null;
-        for (let b of scene.bones) {
-          const rad = (b.worldAngle * Math.PI) / 180;
-          const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
-          if (Math.hypot(mousePos.x - b.worldX, mousePos.y - b.worldY) < 22 || Math.hypot(mousePos.x - eX, mousePos.y - eY) < 22) {
-            selectedBoneId = b.id; syncUI(); break;
-          }
+        if (!selectedBoneId && !selectedJointId) {
+          document.getElementById('selected-panel').style.display = 'none';
         }
-        if (!selectedBoneId) document.getElementById('selected-bone-panel').style.display = 'none';
       }
     });
 
     canvas.addEventListener('mousemove', (e) => {
       mousePos = getMouse(e);
-      if (isInteracting && mode === 'pose' && selectedBoneId) {
+      if (isInteracting && mode === 'pose' && draggingJointId) {
         const scene = getCurrentScene();
-        const bone = scene.bones.find(b => b.id === selectedBoneId);
-        if (bone) {
-          if (!bone.parentId) {
-            bone.x = mousePos.x; bone.y = mousePos.y;
-          } else {
-            const p = scene.bones.find(b => b.id === bone.parentId);
-            if (p) {
-              const dx = mousePos.x - bone.worldX;
-              const dy = mousePos.y - bone.worldY;
-              bone.angle = (Math.atan2(dy, dx) * (180 / Math.PI)) - p.worldAngle;
-            }
-          }
-          autoUpdateKeyframe(bone);
+        const j = scene.joints.find(x => x.id === draggingJointId);
+        if (j) {
+          j.x = mousePos.x;
+          j.y = mousePos.y;
+          autoUpdateKeyframe();
         }
       }
     });
@@ -473,21 +440,23 @@
     canvas.addEventListener('mouseup', () => {
       if (!isInteracting) return;
       isInteracting = false;
+      draggingJointId = null;
       const scene = getCurrentScene();
-      if (mode === 'draw' && drawStartPos) {
-        const dx = mousePos.x - drawStartPos.x, dy = mousePos.y - drawStartPos.y;
-        const len = Math.hypot(dx, dy);
-        if (len > 10) {
-          let initialAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-          if (drawParentId) {
-            const parentBone = scene.bones.find(b => b.id === drawParentId);
-            if (parentBone) initialAngle -= parentBone.worldAngle;
-          }
-          const nb = new Bone('b_' + Date.now(), drawParentId, drawStartPos.x, drawStartPos.y, len, initialAngle);
-          scene.bones.push(nb); selectedBoneId = nb.id; syncUI(); saveProjectState();
+
+      if (mode === 'draw' && drawStartJoint) {
+        let endJoint = scene.joints.find(j => Math.hypot(mousePos.x - j.x, mousePos.y - j.y) < 18);
+        if (!endJoint) {
+          endJoint = new Joint('j_' + Date.now(), mousePos.x, mousePos.y);
+          scene.joints.push(endJoint);
         }
-        drawStartPos = null;
-        drawParentId = null;
+        if (drawStartJoint.id !== endJoint.id) {
+          const nb = new Bone('b_' + Date.now(), drawStartJoint.id, endJoint.id);
+          scene.bones.push(nb);
+          selectedBoneId = nb.id;
+          syncUI();
+          saveProjectState();
+        }
+        drawStartJoint = null;
       }
     });
 
@@ -503,7 +472,12 @@
         if (bgImgObj.complete) ctx.drawImage(bgImgObj, 0, 0, canvas.width, canvas.height);
       }
 
+      // رسم العظام والسبرايتات المرفقة
       scene.bones.forEach(b => {
+        const j1 = scene.joints.find(j => j.id === b.j1Id);
+        const j2 = scene.joints.find(j => j.id === b.j2Id);
+        if (!j1 || !j2) return;
+
         let img = b.baseImage;
         if (b.activeExpression !== "default" && b.expressions[b.activeExpression]) {
           const frames = b.expressions[b.activeExpression];
@@ -514,9 +488,13 @@
         }
 
         if (img) {
+          const midX = (j1.x + j2.x) / 2;
+          const midY = (j1.y + j2.y) / 2;
+          const angle = Math.atan2(j2.y - j1.y, j2.x - j1.x) * (180 / Math.PI);
+
           ctx.save();
-          ctx.translate(b.worldX, b.worldY);
-          ctx.rotate((b.worldAngle * Math.PI) / 180);
+          ctx.translate(midX, midY);
+          ctx.rotate((angle * Math.PI) / 180);
           ctx.translate(b.imgOffX, b.imgOffY);
           ctx.rotate((b.imgAngle * Math.PI) / 180);
           ctx.drawImage(img, -b.imgW/2, -b.imgH/2, b.imgW, b.imgH);
@@ -524,25 +502,26 @@
         }
       });
 
+      // رسم خطوط الهيكل والمفاصل
       if (showBones) {
         scene.bones.forEach(b => {
-          const isSel = b.id === selectedBoneId;
-          const rad = (b.worldAngle * Math.PI) / 180;
-          const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
+          const j1 = scene.joints.find(j => j.id === b.j1Id);
+          const j2 = scene.joints.find(j => j.id === b.j2Id);
+          if (!j1 || !j2) return;
 
-          ctx.beginPath(); ctx.moveTo(b.worldX, b.worldY); ctx.lineTo(eX, eY);
+          const isSel = b.id === selectedBoneId;
+          ctx.beginPath(); ctx.moveTo(j1.x, j1.y); ctx.lineTo(j2.x, j2.y);
           ctx.lineWidth = isSel ? 4 : 2; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.4)'; ctx.stroke();
-          
-          // مفاصل نظيفة ومتساوية للجميع بدون تعقيد
-          ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 5, 0, Math.PI*2);
-          ctx.fillStyle = '#fff'; ctx.fill();
-          
-          ctx.beginPath(); ctx.arc(eX, eY, 4, 0, Math.PI*2);
-          ctx.fillStyle = isSel ? '#60a5fa' : '#94a3b8'; ctx.fill();
         });
 
-        if (drawStartPos && isInteracting) {
-          ctx.beginPath(); ctx.moveTo(drawStartPos.x, drawStartPos.y); ctx.lineTo(mousePos.x, mousePos.y);
+        scene.joints.forEach(j => {
+          const isSel = j.id === selectedJointId;
+          ctx.beginPath(); ctx.arc(j.x, j.y, isSel ? 6 : 4, 0, Math.PI*2);
+          ctx.fillStyle = isSel ? '#60a5fa' : '#ffffff'; ctx.fill();
+        });
+
+        if (drawStartJoint && isInteracting) {
+          ctx.beginPath(); ctx.moveTo(drawStartJoint.x, drawStartJoint.y); ctx.lineTo(mousePos.x, mousePos.y);
           ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
         }
       }
@@ -550,35 +529,25 @@
 
     function syncUI() {
       const scene = getCurrentScene();
-      const b = scene.bones.find(x => x.id === selectedBoneId);
-      if (!b) return;
-      document.getElementById('selected-bone-panel').style.display = 'flex';
-      document.getElementById('texW').value = b.imgW; document.getElementById('texH').value = b.imgH;
-      document.getElementById('texOffX').value = b.imgOffX; document.getElementById('texOffY').value = b.imgOffY;
-      document.getElementById('texAngle').value = b.imgAngle;
-
-      const parentSel = document.getElementById('bone-parent-select');
-      parentSel.innerHTML = '<option value="">(عظمة حرة - بدون أب)</option>';
-      scene.bones.forEach(other => {
-        if(other.id !== b.id) {
-          parentSel.innerHTML += `<option value="${other.id}" ${other.id === b.parentId ? 'selected' : ''}>${other.id}</option>`;
-        }
-      });
+      const panel = document.getElementById('selected-panel');
       
-      const sel = document.getElementById('select-clip-expr');
-      sel.innerHTML = '';
-      Object.keys(b.expressions).forEach(expName => {
-        sel.innerHTML += `<option value="${expName}">${expName}</option>`;
-      });
-    }
+      if (selectedBoneId) {
+        const b = scene.bones.find(x => x.id === selectedBoneId);
+        if (!b) return;
+        panel.style.display = 'flex';
+        document.getElementById('panel-title').innerText = "خصائص العظمة والسبرايت";
+        document.getElementById('texW').value = b.imgW; document.getElementById('texH').value = b.imgH;
+        document.getElementById('texOffX').value = b.imgOffX; document.getElementById('texOffY').value = b.imgOffY;
+        document.getElementById('texAngle').value = b.imgAngle;
 
-    function changeBoneParent() {
-      const scene = getCurrentScene();
-      const b = scene.bones.find(x => x.id === selectedBoneId);
-      if (!b) return;
-      const pid = document.getElementById('bone-parent-select').value;
-      b.parentId = pid ? pid : null;
-      saveProjectState();
+        const sel = document.getElementById('select-clip-expr');
+        sel.innerHTML = '';
+        Object.keys(b.expressions).forEach(expName => {
+          sel.innerHTML += `<option value="${expName}">${expName}</option>`;
+        });
+      } else if (selectedJointId) {
+        panel.style.display = 'none'; // يمكن إضافة خصائص للمفصل هنا لاحقاً
+      }
     }
 
     function uploadBoneImage(e) {
@@ -586,7 +555,7 @@
       const b = scene.bones.find(x => x.id === selectedBoneId); if (!b || !e.target.files[0]) return;
       const reader = new FileReader(); reader.onload = ev => {
         const img = new Image(); img.onload = () => {
-          b.baseImage = img; b.imgW = img.width; b.imgH = img.height; syncUI(); autoUpdateKeyframe(b); saveProjectState();
+          b.baseImage = img; b.imgW = img.width; b.imgH = img.height; syncUI(); saveProjectState();
         }; img.src = ev.target.result;
       }; reader.readAsDataURL(e.target.files[0]);
     }
@@ -614,7 +583,7 @@
     function addExpressionClip() {
       const scene = getCurrentScene();
       const b = scene.bones.find(x => x.id === selectedBoneId);
-      if (!b) return alert("اختر قطعة أولاً");
+      if (!b) return alert("اختر عظمة أولاً");
       const exprName = document.getElementById('select-clip-expr').value;
       const duration = parseInt(document.getElementById('clip-duration-input').value) || 30;
       if (!exprName) return alert("لا يوجد تعبير متاح");
@@ -641,11 +610,11 @@
 
     function saveKeyframe() {
       const scene = getCurrentScene();
-      const state = {};
+      const jointStates = {};
       const intFrame = Math.round(currentFrame);
-      scene.bones.forEach(b => { state[b.id] = { x: b.x, y: b.y, angle: b.angle }; });
+      scene.joints.forEach(j => { jointStates[j.id] = { x: j.x, y: j.y }; });
       scene.keyframes = scene.keyframes.filter(k => k.frame !== intFrame);
-      scene.keyframes.push({ frame: intFrame, states: state });
+      scene.keyframes.push({ frame: intFrame, joints: jointStates });
       scene.keyframes.sort((a,b) => a.frame - b.frame);
       drawTimelineNodes();
       saveProjectState();
@@ -656,7 +625,7 @@
       const intFrame = Math.round(currentFrame);
       const kf = scene.keyframes.find(k => k.frame === intFrame);
       if (!kf) return alert("لا توجد لقطة في هذا الإطار!");
-      copiedKeyframeData = JSON.parse(JSON.stringify(kf.states));
+      copiedKeyframeData = JSON.parse(JSON.stringify(kf.joints));
       alert("تم نسخ اللقطة!");
     }
 
@@ -665,18 +634,21 @@
       const scene = getCurrentScene();
       const intFrame = Math.round(currentFrame);
       scene.keyframes = scene.keyframes.filter(k => k.frame !== intFrame);
-      scene.keyframes.push({ frame: intFrame, states: copiedKeyframeData });
+      scene.keyframes.push({ frame: intFrame, joints: copiedKeyframeData });
       scene.keyframes.sort((a,b) => a.frame - b.frame);
       drawTimelineNodes();
       saveProjectState();
       alert("تم لصق اللقطة!");
     }
     
-    function autoUpdateKeyframe(bone) {
+    function autoUpdateKeyframe() {
       const scene = getCurrentScene();
       let kf = scene.keyframes.find(k => k.frame === Math.round(currentFrame));
-      if (kf && kf.states[bone.id]) {
-        kf.states[bone.id] = { x: bone.x, y: bone.y, angle: bone.angle };
+      if (kf) {
+        scene.joints.forEach(j => {
+          if (!kf.joints[j.id]) kf.joints[j.id] = {};
+          kf.joints[j.id] = { x: j.x, y: j.y };
+        });
         saveProjectState();
       }
     }
@@ -813,15 +785,22 @@
 
     function toggleBoneVisibility() { showBones = !showBones; }
     function resizeCanvas() { canvas.width = document.getElementById('canvas-width-input').value; canvas.height = document.getElementById('canvas-height-input').value; }
-    function deleteSelectedBone() {
-      if(!selectedBoneId) return;
+    
+    function deleteSelectedElement() {
       const scene = getCurrentScene();
-      const ids = new Set([selectedBoneId]); let add = true;
-      while(add){ add=false; scene.bones.forEach(b=>{if(ids.has(b.parentId)&&!ids.has(b.id)){ids.add(b.id);add=true;}}); }
-      scene.bones = scene.bones.filter(b=>!ids.has(b.id));
-      selectedBoneId=null; document.getElementById('selected-bone-panel').style.display='none';
+      if (selectedBoneId) {
+        scene.bones = scene.bones.filter(b => b.id !== selectedBoneId);
+        selectedBoneId = null;
+      } else if (selectedJointId) {
+        // حذف المفصل وأي عظمة مرتبطة به
+        scene.bones = scene.bones.filter(b => b.j1Id !== selectedJointId && b.j2Id !== selectedJointId);
+        scene.joints = scene.joints.filter(j => j.id !== selectedJointId);
+        selectedJointId = null;
+      }
+      document.getElementById('selected-panel').style.display = 'none';
       saveProjectState();
     }
+
     function uploadSceneBackground(e){
       const r = new FileReader(); r.onload = ev => { getCurrentScene().bgImgSrc = ev.target.result; saveProjectState(); }; r.readAsDataURL(e.target.files[0]);
     }
