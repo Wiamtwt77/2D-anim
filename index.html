@@ -2,121 +2,126 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Upload Studio - NLE Pro Edition</title>
+  <title>Twencraft Studio - Scene Director Edition</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0b0c10; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-    header { background: #1a1b23; padding: 10px 20px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; z-index: 10; }
-    .tool-group { display: flex; gap: 8px; align-items: center; }
+    header { background: #161821; padding: 8px 16px; border-bottom: 1px solid #232635; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; z-index: 10; }
+    .tool-group { display: flex; gap: 6px; align-items: center; }
     
-    button { background: #2a2c37; border: 1px solid #3d4050; color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
-    button:hover { background: #373a4a; transform: translateY(-1px); }
-    button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.3); }
+    button { background: #222634; border: 1px solid #33384f; color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+    button:hover { background: #2f354a; transform: translateY(-1px); }
+    button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
     button.accent { background: #10b981; border-color: #34d399; }
     button.danger { background: #ef4444; border-color: #f87171; }
-    input[type="number"], input[type="text"], select { background: #111217; border: 1px solid #3d4050; color: #fff; padding: 6px; border-radius: 4px; text-align: center; font-size: 12px; }
+    input[type="number"], input[type="text"], select { background: #11131a; border: 1px solid #33384f; color: #fff; padding: 5px; border-radius: 4px; text-align: center; font-size: 12px; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
-    .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 20px; }
-    canvas { background: #14151c; border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); cursor: crosshair; }
+    .canvas-container { flex: 1; background: #060709; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 10px; }
+    canvas { background: #10121a; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: crosshair; }
 
-    .context-panel { position: absolute; top: 20px; right: 20px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 16px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 12px; width: 340px; max-height: calc(100% - 40px); overflow-y: auto; z-index: 20; }
-    .context-panel h4 { font-size: 13px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 6px; margin-top: 6px; }
-    .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+    /* Scene Director & Properties Panel */
+    .sidebar { width: 310px; background: #161821; border-left: 1px solid #232635; display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto; z-index: 20; }
+    .sidebar h4 { font-size: 12px; color: #60a5fa; border-bottom: 1px solid #232635; padding-bottom: 4px; margin-top: 4px; }
+    .field { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+    
+    .scene-card { background: #1f2333; padding: 8px; border-radius: 6px; border: 1px solid #33384f; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; cursor: pointer; }
+    .scene-card.active { border-color: #3b82f6; background: #252b42; }
 
-    /* NLE Timeline Styles */
-    .timeline { height: 220px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 10px 20px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
-    .timeline-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    /* Timeline & Director Tracks */
+    .director-panel { height: 210px; background: #161821; border-top: 1px solid #232635; padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+    .timeline-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
     
     .tracks-container { position: relative; display: flex; flex-direction: column; gap: 4px; flex: 1; margin-top: 4px; overflow-x: auto; }
-    .track-label { font-size: 10px; color: #94a3b8; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; }
+    .track-label { font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; }
+    .track { position: relative; height: 30px; background: #0c0e14; border: 1px solid #232635; border-radius: 4px; cursor: pointer; overflow: hidden; width: 100%; }
+    .scrubber { position: absolute; top: 0; width: 2px; height: 100%; background: #ef4444; pointer-events: none; z-index: 20; box-shadow: 0 0 6px #ef4444; }
     
-    .track { position: relative; height: 32px; background: #0f1015; border: 1px solid #2e313d; border-radius: 4px; cursor: pointer; overflow: hidden; width: 100%; }
-    .scrubber { position: absolute; top: 0; width: 2px; height: 100%; background: #ef4444; pointer-events: none; z-index: 20; box-shadow: 0 0 8px #ef4444; }
-    
-    .kf-node { position: absolute; top: 50%; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 5; box-shadow: 0 0 8px #3b82f6; }
-    
-    /* NLE Clips (Audio & Expressions) */
-    .nle-clip { position: absolute; top: 3px; height: 26px; border-radius: 4px; cursor: grab; z-index: 6; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: #fff; font-weight: bold; overflow: hidden; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); }
-    .nle-clip:active { cursor: grabbing; opacity: 0.9; }
-    .audio-clip-item { background: rgba(239, 68, 68, 0.5); border-color: #ef4444; }
-    .expr-clip-item { background: rgba(16, 185, 129, 0.5); border-color: #10b981; }
+    .kf-node { position: absolute; top: 50%; width: 9px; height: 9px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 5; }
+    .nle-clip { position: absolute; top: 2px; height: 24px; border-radius: 4px; cursor: grab; z-index: 6; display: flex; align-items: center; padding: 0 6px; font-size: 10px; color: #fff; font-weight: bold; overflow: hidden; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); }
+    .audio-clip-item { background: rgba(239, 68, 68, 0.6); border-color: #ef4444; }
+    .expr-clip-item { background: rgba(16, 185, 129, 0.6); border-color: #10b981; }
 
-    .exp-box { background: #1e202a; padding: 8px; border-radius: 6px; border: 1px solid #3d4050; display: flex; flex-direction: column; gap: 6px; }
+    .exp-box { background: #1f2333; padding: 8px; border-radius: 6px; border: 1px solid #33384f; display: flex; flex-direction: column; gap: 5px; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك المفاصل</button>
       <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم العظام</button>
       <button onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
     </div>
     
     <div class="tool-group">
-      <span style="font-size:12px;">المقاس:</span>
-      <input type="number" id="canvas-width-input" value="800" step="50" style="width:55px;" onchange="resizeCanvas()">
-      <span style="font-size:12px;">×</span>
-      <input type="number" id="canvas-height-input" value="600" step="50" style="width:55px;" onchange="resizeCanvas()">
-      <button onclick="document.getElementById('bg-file').click()">🖼️ خلفية</button>
-      <input type="file" id="bg-file" accept="image/*" style="display:none;" onchange="uploadBackground(event)">
+      <span style="font-size:11px;">المقاس:</span>
+      <input type="number" id="canvas-width-input" value="800" step="50" style="width:50px;" onchange="resizeCanvas()">
+      <span style="font-size:11px;">×</span>
+      <input type="number" id="canvas-height-input" value="600" step="50" style="width:50px;" onchange="resizeCanvas()">
+      <button onclick="document.getElementById('bg-file').click()">🖼️ خلفية المشهد</button>
+      <input type="file" id="bg-file" accept="image/*" style="display:none;" onchange="uploadSceneBackground(event)">
     </div>
 
     <div class="tool-group">
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف</button>
-      <button onclick="clearLocalStorageData()" style="background:#475569; font-size:11px;">🔄 إعادة تعيين</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العنصر</button>
+      <button onclick="clearLocalStorageData()" style="background:#334155; font-size:11px;">🔄 إعادة ضبط</button>
     </div>
   </header>
 
   <div class="workspace">
     <div class="canvas-container">
       <canvas id="stage" width="800" height="600"></canvas>
+    </div>
 
-      <div class="context-panel" id="side-panel" style="display:none;">
-        <h3 id="panel-title" style="font-size:14px;">خصائص القطعة</h3>
+    <!-- Director Sidebar: Scenes & Part Properties -->
+    <div class="sidebar">
+      <h4>🎬 إدارة المشاهد (Scenes)</h4>
+      <div id="scenes-list"></div>
+      <button onclick="addNewScene()" class="accent" style="width:100%;">➕ إضافة مشهد جديد</button>
 
-        <h4>1. المظهر</h4>
-        <button onclick="document.getElementById('bone-img-file').click()">📁 رفع صورة أساسية</button>
+      <div id="selected-bone-panel" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
+        <h4 id="panel-title">خصائص العظمة/السبرايت</h4>
+        <button onclick="document.getElementById('bone-img-file').click()">📁 رفع صورة أساسية (Sprite)</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
-        <h4>2. إعدادات التعابير (مكتبة الصور المتتابعة)</h4>
+        <h4>😊 مكتبة التعابير والسبرايتات</h4>
         <div class="exp-box">
-          <input type="text" id="new-exp-name" placeholder="اسم التعبير (مثال: غضب، كلام)">
-          <button onclick="document.getElementById('exp-file').click()" style="background:#0ea5e9;">➕ رفع صور التعبير</button>
+          <input type="text" id="new-exp-name" placeholder="اسم التعبير (مثال: كلام، فرح)">
+          <button onclick="document.getElementById('exp-file').click()" style="background:#0284c7;">➕ رفع صور التعبير المتتابعة</button>
           <input type="file" id="exp-file" accept="image/*" multiple style="display:none;" onchange="createNewExpression(event)">
           
-          <div style="margin-top: 6px;">
-            <label style="font-size:11px; color:#a78bfa;">إضافة تعبير كمقطع (Clip) في التايم لاين:</label>
-            <div style="display:flex; gap:6px; margin-top:4px;">
+          <div style="margin-top: 4px;">
+            <label style="font-size:10px; color:#a78bfa;">إضافة تعبير كمقطع في التايم لاين:</label>
+            <div style="display:flex; gap:4px; margin-top:3px;">
               <select id="select-clip-expr" style="flex:1;"></select>
-              <button onclick="addExpressionClip()" class="accent" style="padding:4px 8px;">إضافة مقطع</button>
+              <button onclick="addExpressionClip()" class="accent" style="padding:3px 6px;">إضافة</button>
             </div>
           </div>
         </div>
 
-        <h4>3. الأبعاد</h4>
-        <div class="field"><label>العرض/الطول:</label>
-          <div style="display:flex; gap:4px;">
-            <input type="number" id="texW" style="width:60px;" oninput="updateTex()">
-            <input type="number" id="texH" style="width:60px;" oninput="updateTex()">
+        <h4>📐 الأبعاد والموقع</h4>
+        <div class="field"><label>العرض / الطول:</label>
+          <div style="display:flex; gap:3px;">
+            <input type="number" id="texW" style="width:55px;" oninput="updateTex()">
+            <input type="number" id="texH" style="width:55px;" oninput="updateTex()">
           </div>
         </div>
-        <div class="field"><label>إزاحة X/Y:</label>
-          <div style="display:flex; gap:4px;">
-            <input type="number" id="texOffX" style="width:50px;" oninput="updateTex()">
-            <input type="number" id="texOffY" style="width:50px;" oninput="updateTex()">
+        <div class="field"><label>إزاحة X / Y:</label>
+          <div style="display:flex; gap:3px;">
+            <input type="number" id="texOffX" style="width:45px;" oninput="updateTex()">
+            <input type="number" id="texOffY" style="width:45px;" oninput="updateTex()">
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="timeline">
+  <div class="director-panel">
     <div class="timeline-controls">
       <div class="tool-group">
-        <button id="btn-play" onclick="togglePlay()" class="active" style="width: 85px;">▶ تشغيل</button>
+        <button id="btn-play" onclick="togglePlay()" class="active" style="width: 75px;">▶ تشغيل</button>
         <button onclick="saveKeyframe()" class="accent">➕ حفظ لقطة</button>
         <button onclick="copyKeyframe()">📋 نسخ</button>
         <button onclick="pasteKeyframe()">📌 لصق</button>
@@ -124,23 +129,23 @@
       </div>
 
       <div class="tool-group">
-        <span style="font-size:11px; color:#94a3b8;">منحنى الحركة:</span>
-        <select id="easing-select" onchange="saveAutoSetting()">
+        <span style="font-size:10px; color:#94a3b8;">الحركة:</span>
+        <select id="easing-select" onchange="saveProjectState()">
           <option value="smooth">ناعم (Smooth)</option>
           <option value="linear">خطي (Linear)</option>
           <option value="easeIn">تسارع (Ease In)</option>
           <option value="easeOut">تباطؤ (Ease Out)</option>
           <option value="bounce">ارتداد (Bounce)</option>
         </select>
-        <span style="font-size:11px; color:#94a3b8;">إطارات:</span>
-        <input type="number" id="max-frames" value="120" min="20" step="10" style="width:55px;" onchange="updateTimelineScale()">
+        <span style="font-size:10px; color:#94a3b8;">الإطارات:</span>
+        <input type="number" id="max-frames" value="120" min="20" step="10" style="width:50px;" onchange="updateTimelineScale()">
       </div>
 
       <div class="tool-group">
-        <button id="btn-record" onclick="toggleRecording()" style="background:#ef4444; font-size:11px;">🎙️ تسجيل صوت</button>
+        <button onclick="recordAudioClip()" style="background:#ef4444; font-size:11px;">🎙️ تسجيل صوت جديد</button>
       </div>
 
-      <span style="font-size: 13px; font-weight:bold;">الإطار: <b id="lbl-frame" style="color:#60a5fa; font-size:15px;">0</b></span>
+      <span style="font-size: 12px; font-weight:bold;">الإطار: <b id="lbl-frame" style="color:#60a5fa; font-size:14px;">0</b></span>
     </div>
     
     <div class="tracks-container" id="tracks-scroll">
@@ -149,12 +154,12 @@
         <div class="scrubber" id="scrubber-line"></div>
       </div>
 
-      <div class="track-label" style="margin-top:4px;"><span>مسار الصوت (Audio Track - اسحب الكتلة لتغيير مكانها)</span></div>
+      <div class="track-label" style="margin-top:3px;"><span>مسار الأصوات المتعددة (Audio Clips Track - اسحب أي مقطع لحريتك)</span></div>
       <div class="track" id="audio-track">
-        <div class="nle-clip audio-clip-item" id="audio-clip" style="display:none; left:0px; width:100px;" onmousedown="startDragAudio(event)">🎵 مقطع صوتي</div>
+        <!-- Audio clips rendered dynamically -->
       </div>
 
-      <div class="track-label" style="margin-top:4px;"><span>مسار التعابير (Expression Clips Track)</span></div>
+      <div class="track-label" style="margin-top:3px;"><span>مسار التعابير والسبرايتات (Expression Clips Track)</span></div>
       <div class="track" id="expr-track">
         <!-- Expression clips rendered dynamically -->
       </div>
@@ -166,19 +171,20 @@
     const ctx = canvas.getContext('2d');
 
     let mode = 'pose';
-    let bones = [];
-    let selectedBoneId = null;
-    let keyframes = [];
-    let expressionClips = []; // NLE Clips for expressions: {id, boneId, exprName, startFrame, duration}
     let showBones = true;
-    let bgImage = null;
+    
+    // Scene Manager State
+    let scenes = [
+      { id: 'scene_1', title: 'المشهد الأول 🎬', duration: 120, bgImgSrc: null, bones: [], keyframes: [], expressionClips: [], audioClips: [] }
+    ];
+    let currentSceneId = 'scene_1';
 
-    let isPlaying = false;
-    let currentFrame = 0; 
+    let selectedBoneId = null;
+    let currentFrame = 0;
     let maxFrames = 120;
-    let playSpeed = 30; 
+    let playSpeed = 30;
     let lastTimestamp = 0;
-    let animationReq = null;
+    let isPlaying = false;
     let copiedKeyframeData = null;
 
     let isInteracting = false;
@@ -186,17 +192,8 @@
     let drawStartPos = null;
     let mousePos = { x: 0, y: 0 };
     let snapIndicator = null;
-
-    // Audio NLE states
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let audioPlayer = new Audio();
-    let audioStartFrame = 0;
-    let audioDurationFrames = 0;
-    let isDraggingAudio = false;
+    let draggingAudioId = null;
     let audioDragStartX = 0;
-
-    // Expression clip dragging
     let draggingExprClipId = null;
     let exprDragStartX = 0;
 
@@ -208,80 +205,111 @@
         this.baseImage = null;
         this.imgW = 100; this.imgH = 100;
         this.imgOffX = 0; this.imgOffY = 0;
-        this.expressions = {}; 
+        this.expressions = {};
         this.activeExpression = "default";
       }
     }
 
-    // --- Auto Save & Load ---
-    function saveProjectToLocalStorage() {
-      const data = {
-        bones: bones.map(b => ({
-          id: b.id, parentId: b.parentId, x: b.x, y: b.y, length: b.length, angle: b.angle,
-          imgW: b.imgW, imgH: b.imgH, imgOffX: b.imgOffX, imgOffY: b.imgOffY,
-          activeExpression: b.activeExpression,
-          // Convert image data URLs if stored or keep base
-          baseImageSrc: b.baseImage ? b.baseImage.src : null,
-          expressions: Object.fromEntries(Object.entries(b.expressions).map(([k, arr]) => [k, arr.map(img => img.src)]))
-        })),
-        keyframes, expressionClips, maxFrames,
-        audioSrc: audioPlayer.src ? audioPlayer.src : null,
-        audioStartFrame, audioDurationFrames
-      };
-      localStorage.setItem('twencraft_nle_project', JSON.stringify(data));
+    function getCurrentScene() {
+      return scenes.find(s => s.id === currentSceneId) || scenes[0];
     }
 
-    function loadProjectFromLocalStorage() {
-      const saved = localStorage.getItem('twencraft_nle_project');
+    // --- Auto-Save & LocalStorage ---
+    function saveProjectState() {
+      const scene = getCurrentScene();
+      scene.maxFrames = maxFrames;
+      localStorage.setItem('twencraft_director_project', JSON.stringify({ scenes, currentSceneId }));
+    }
+
+    function loadProjectState() {
+      const saved = localStorage.getItem('twencraft_director_project');
       if (!saved) return;
       try {
         const data = JSON.parse(saved);
-        maxFrames = data.maxFrames || 120;
-        document.getElementById('max-frames').value = maxFrames;
-        keyframes = data.keyframes || [];
-        expressionClips = data.expressionClips || [];
-        audioStartFrame = data.audioStartFrame || 0;
-        audioDurationFrames = data.audioDurationFrames || 0;
-        if (data.audioSrc) { audioPlayer.src = data.audioSrc; updateAudioVisual(); }
-
-        bones = (data.bones || []).map(bd => {
-          let b = new Bone(bd.id, bd.parentId, bd.x, bd.y, bd.length, bd.angle);
-          b.imgW = bd.imgW; b.imgH = bd.imgH; b.imgOffX = bd.imgOffX; b.imgOffY = bd.imgOffY;
-          b.activeExpression = bd.activeExpression || "default";
-          if (bd.baseImageSrc) {
-            let img = new Image(); img.src = bd.baseImageSrc; b.baseImage = img;
-          }
-          if (bd.expressions) {
-            b.expressions = {};
-            Object.keys(bd.expressions).forEach(k => {
-              b.expressions[k] = bd.expressions[k].map(src => { let im = new Image(); im.src = src; return im; });
-            });
-          }
-          return b;
-        });
-        updateTimelineScale();
-      } catch(e) { console.error("Error loading save:", e); }
+        if (data.scenes) {
+          scenes = data.scenes.map(sd => {
+            let sc = {
+              id: sd.id, title: sd.title, duration: sd.duration || 120,
+              bgImgSrc: sd.bgImgSrc, keyframes: sd.keyframes || [],
+              expressionClips: sd.expressionClips || [], audioClips: sd.audioClips || [],
+              bones: (sd.bones || []).map(bd => {
+                let b = new Bone(bd.id, bd.parentId, bd.x, bd.y, bd.length, bd.angle);
+                b.imgW = bd.imgW; b.imgH = bd.imgH; b.imgOffX = bd.imgOffX; b.imgOffY = bd.imgOffY;
+                b.activeExpression = bd.activeExpression || "default";
+                if (bd.baseImageSrc) { let im = new Image(); im.src = bd.baseImageSrc; b.baseImage = im; }
+                if (bd.expressions) {
+                  b.expressions = {};
+                  Object.keys(bd.expressions).forEach(k => {
+                    b.expressions[k] = bd.expressions[k].map(src => { let im = new Image(); im.src = src; return im; });
+                  });
+                }
+                return b;
+              })
+            };
+            return sc;
+          });
+          currentSceneId = data.currentSceneId || scenes[0].id;
+        }
+      } catch(e) { console.error("Error loading project:", e); }
+      maxFrames = getCurrentScene().duration || 120;
+      document.getElementById('max-frames').value = maxFrames;
+      renderScenesList();
+      updateTimelineScale();
     }
 
     function clearLocalStorageData() {
-      if(confirm("هل أنت متأكد من إعادة تعيين المشروع بالكامل؟")) {
-        localStorage.removeItem('twencraft_nle_project');
+      if(confirm("هل أنت متأكد من مسح وإعادة ضبط المشروع بالكامل؟")) {
+        localStorage.removeItem('twencraft_director_project');
         location.reload();
       }
     }
 
-    // --- Core FK Engine ---
-    function updateTransforms() {
-      bones.forEach(b => b._updated = false);
-      bones.forEach(b => calculateWorld(b));
+    // --- Scene Manager UI ---
+    function renderScenesList() {
+      const list = document.getElementById('scenes-list');
+      list.innerHTML = '';
+      scenes.forEach(s => {
+        const div = document.createElement('div');
+        div.className = `scene-card ${s.id === currentSceneId ? 'active' : ''}`;
+        div.innerHTML = `<span>🎬 ${s.title}</span> <span style="font-size:10px; color:#94a3b8;">${s.duration} إطار</span>`;
+        div.onclick = () => switchScene(s.id);
+        list.appendChild(div);
+      });
     }
 
-    function calculateWorld(bone) {
+    function addNewScene() {
+      const id = 'scene_' + Date.now();
+      scenes.push({ id, title: `مشهد ${scenes.length + 1}`, duration: 120, bgImgSrc: null, bones: [], keyframes: [], expressionClips: [], audioClips: [] });
+      switchScene(id);
+      saveProjectState();
+    }
+
+    function switchScene(id) {
+      currentSceneId = id;
+      const s = getCurrentScene();
+      maxFrames = s.duration || 120;
+      document.getElementById('max-frames').value = maxFrames;
+      currentFrame = 0;
+      selectedBoneId = null;
+      document.getElementById('selected-bone-panel').style.display = 'none';
+      renderScenesList();
+      updateTimelineScale();
+      saveProjectState();
+    }
+
+    // --- Robust FK Engine (No Detachment) ---
+    function updateTransforms() {
+      const scene = getCurrentScene();
+      scene.bones.forEach(b => b._updated = false);
+      scene.bones.forEach(b => calculateWorld(b, scene.bones));
+    }
+
+    function calculateWorld(bone, bonesList) {
       if (bone._updated) return;
       if (bone.parentId) {
-        const parent = bones.find(b => b.id === bone.parentId);
+        const parent = bonesList.find(b => b.id === bone.parentId);
         if (parent) {
-          calculateWorld(parent);
+          calculateWorld(parent, bonesList);
           const parentRad = (parent.worldAngle * Math.PI) / 180;
           bone.worldX = parent.worldX + Math.cos(parentRad) * parent.length;
           bone.worldY = parent.worldY + Math.sin(parentRad) * parent.length;
@@ -293,7 +321,7 @@
       bone._updated = true;
     }
 
-    // --- Main 60FPS Engine ---
+    // --- 60FPS Animation Loop ---
     function engineLoop(timestamp) {
       if (!lastTimestamp) lastTimestamp = timestamp;
       const dt = (timestamp - lastTimestamp) / 1000;
@@ -303,16 +331,14 @@
         currentFrame += dt * playSpeed;
         if (currentFrame > maxFrames) {
           currentFrame = 0;
-          if (audioPlayer.src) { audioPlayer.pause(); audioPlayer.currentTime = 0; }
         }
-        syncAudioPlayback();
         evaluateFrame(currentFrame);
         updateUIProgress();
       }
       
       updateTransforms();
       drawStage();
-      animationReq = requestAnimationFrame(engineLoop);
+      requestAnimationFrame(engineLoop);
     }
     requestAnimationFrame(engineLoop);
 
@@ -327,33 +353,32 @@
         if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
         return n1 * (t -= 2.625 / d1) * t + 0.984375;
       }
-      // Default Smooth
       return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
     }
 
     function evaluateFrame(frame) {
-      // 1. Evaluate NLE Expression Clips (Video editing style overrides)
-      bones.forEach(b => {
-        let activeClip = expressionClips.find(c => c.boneId === b.id && frame >= c.startFrame && frame <= (c.startFrame + c.duration));
-        if (activeClip) {
-          b.activeExpression = activeClip.exprName;
-        }
+      const scene = getCurrentScene();
+      
+      // Evaluate Expression Clips
+      scene.bones.forEach(b => {
+        let activeClip = scene.expressionClips.find(c => c.boneId === b.id && frame >= c.startFrame && frame <= (c.startFrame + c.duration));
+        if (activeClip) b.activeExpression = activeClip.exprName;
       });
 
-      if (keyframes.length === 0) return;
-      let kf1 = keyframes[0], kf2 = keyframes[keyframes.length - 1];
-      for (let k of keyframes) { if (k.frame <= frame) kf1 = k; }
-      for (let i = keyframes.length - 1; i >= 0; i--) { if (keyframes[i].frame >= frame) kf2 = keyframes[i]; }
+      if (scene.keyframes.length === 0) return;
+      let kf1 = scene.keyframes[0], kf2 = scene.keyframes[scene.keyframes.length - 1];
+      for (let k of scene.keyframes) { if (k.frame <= frame) kf1 = k; }
+      for (let i = scene.keyframes.length - 1; i >= 0; i--) { if (scene.keyframes[i].frame >= frame) kf2 = scene.keyframes[i]; }
 
       const easingType = document.getElementById('easing-select').value;
 
-      bones.forEach(b => {
+      scene.bones.forEach(b => {
         const s1 = kf1.states[b.id], s2 = kf2.states[b.id];
         if (s1 && s2 && kf1.frame !== kf2.frame) {
           const t = Math.max(0, Math.min(1, (frame - kf1.frame) / (kf2.frame - kf1.frame)));
           const smoothT = applyEasing(t, easingType);
           
-          if(!b.parentId) {
+          if (!b.parentId) {
             b.x = s1.x + (s2.x - s1.x) * smoothT;
             b.y = s1.y + (s2.y - s1.y) * smoothT;
           }
@@ -361,25 +386,25 @@
           while(dAngle > 180) dAngle -= 360;
           while(dAngle < -180) dAngle += 360;
           b.angle = s1.angle + dAngle * smoothT;
-
         } else if (s1) {
-          if(!b.parentId) { b.x = s1.x; b.y = s1.y; }
+          if (!b.parentId) { b.x = s1.x; b.y = s1.y; }
           b.angle = s1.angle;
         }
       });
     }
 
-    // --- Interaction (Mouse) ---
+    // --- Interactive Selection & Joint/Bone Grabbing ---
     function getMouse(e) {
       const rect = canvas.getBoundingClientRect();
       return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
     }
 
     function getSnap(pos) {
-      for (let b of bones) {
+      const scene = getCurrentScene();
+      for (let b of scene.bones) {
         const rad = (b.worldAngle * Math.PI) / 180;
         const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
-        if (Math.hypot(pos.x - eX, pos.y - eY) < 30) return { id: b.id, x: eX, y: eY };
+        if (Math.hypot(pos.x - eX, pos.y - eY) < 25) return { id: b.id, x: eX, y: eY };
       }
       return null;
     }
@@ -387,33 +412,37 @@
     canvas.addEventListener('mousedown', (e) => {
       mousePos = getMouse(e);
       isInteracting = true;
+      const scene = getCurrentScene();
+
       if (mode === 'draw') {
         const snap = getSnap(mousePos);
         drawStartPos = snap ? { pid: snap.id, x: snap.x, y: snap.y } : { pid: null, x: mousePos.x, y: mousePos.y };
       } else {
         selectedBoneId = null;
-        for (let b of bones) {
+        for (let b of scene.bones) {
           const rad = (b.worldAngle * Math.PI) / 180;
-          const midX = b.worldX + (Math.cos(rad) * b.length)/2, midY = b.worldY + (Math.sin(rad) * b.length)/2;
-          if (Math.hypot(mousePos.x - b.worldX, mousePos.y - b.worldY) < 20 || Math.hypot(mousePos.x - midX, mousePos.y - midY) < (b.length/2)) {
+          const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
+          // Clicking either joint (Start/End) or bone body selects it comfortably!
+          if (Math.hypot(mousePos.x - b.worldX, mousePos.y - b.worldY) < 22 || Math.hypot(mousePos.x - eX, mousePos.y - eY) < 22) {
             selectedBoneId = b.id; syncUI(); break;
           }
         }
-        if(!selectedBoneId) document.getElementById('side-panel').style.display = 'none';
+        if (!selectedBoneId) document.getElementById('selected-bone-panel').style.display = 'none';
       }
     });
 
     canvas.addEventListener('mousemove', (e) => {
       mousePos = getMouse(e);
+      const scene = getCurrentScene();
       snapIndicator = (mode === 'draw' && !isInteracting) ? getSnap(mousePos) : null;
 
       if (isInteracting && mode === 'pose' && selectedBoneId) {
-        const bone = bones.find(b => b.id === selectedBoneId);
+        const bone = scene.bones.find(b => b.id === selectedBoneId);
         if (bone) {
           if (!bone.parentId) {
             bone.x = mousePos.x; bone.y = mousePos.y;
           } else {
-            const p = bones.find(b => b.id === bone.parentId);
+            const p = scene.bones.find(b => b.id === bone.parentId);
             if (p) {
               const dx = mousePos.x - bone.worldX;
               const dy = mousePos.y - bone.worldY;
@@ -428,25 +457,34 @@
     canvas.addEventListener('mouseup', () => {
       if (!isInteracting) return;
       isInteracting = false;
+      const scene = getCurrentScene();
       if (mode === 'draw' && drawStartPos) {
         const dx = mousePos.x - drawStartPos.x, dy = mousePos.y - drawStartPos.y;
         const len = Math.hypot(dx, dy);
         if (len > 15) {
           let ang = Math.atan2(dy, dx) * (180 / Math.PI);
-          if (drawStartPos.pid) { ang -= bones.find(b => b.id === drawStartPos.pid).worldAngle; }
+          if (drawStartPos.pid) { ang -= scene.bones.find(b => b.id === drawStartPos.pid).worldAngle; }
           const nb = new Bone('b_' + Date.now(), drawStartPos.pid, drawStartPos.x, drawStartPos.y, len, ang);
-          bones.push(nb); selectedBoneId = nb.id; syncUI(); saveProjectToLocalStorage();
+          scene.bones.push(nb); selectedBoneId = nb.id; syncUI(); saveProjectState();
         }
         drawStartPos = null;
       }
     });
 
-    // --- Rendering Stage ---
+    // --- Canvas Rendering ---
+    let bgImgObj = null;
     function drawStage() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (bgImage) ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      const scene = getCurrentScene();
 
-      bones.forEach(b => {
+      if (scene.bgImgSrc) {
+        if (!bgImgObj || bgImgObj.src !== scene.bgImgSrc) {
+          bgImgObj = new Image(); bgImgObj.src = scene.bgImgSrc;
+        }
+        if (bgImgObj.complete) ctx.drawImage(bgImgObj, 0, 0, canvas.width, canvas.height);
+      }
+
+      scene.bones.forEach(b => {
         let img = b.baseImage;
         if (b.activeExpression !== "default" && b.expressions[b.activeExpression]) {
           const frames = b.expressions[b.activeExpression];
@@ -467,20 +505,24 @@
       });
 
       if (showBones) {
-        bones.forEach(b => {
+        scene.bones.forEach(b => {
           const isSel = b.id === selectedBoneId;
           const rad = (b.worldAngle * Math.PI) / 180;
           const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
 
           ctx.beginPath(); ctx.moveTo(b.worldX, b.worldY); ctx.lineTo(eX, eY);
-          ctx.lineWidth = isSel ? 5 : 3; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.5)'; ctx.stroke();
-          ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 6, 0, Math.PI*2);
+          ctx.lineWidth = isSel ? 4 : 2; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.4)'; ctx.stroke();
+          
+          // Joint Handles (Clickable and visible)
+          ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 5, 0, Math.PI*2);
           ctx.fillStyle = !b.parentId ? '#ef4444' : '#fff'; ctx.fill();
+          ctx.beginPath(); ctx.arc(eX, eY, 4, 0, Math.PI*2);
+          ctx.fillStyle = isSel ? '#60a5fa' : '#94a3b8'; ctx.fill();
         });
 
         if (snapIndicator) {
-          ctx.beginPath(); ctx.arc(snapIndicator.x, snapIndicator.y, 10, 0, Math.PI*2);
-          ctx.fillStyle = 'rgba(16, 185, 129, 0.6)'; ctx.fill();
+          ctx.beginPath(); ctx.arc(snapIndicator.x, snapIndicator.y, 8, 0, Math.PI*2);
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.7)'; ctx.fill();
         }
         if (drawStartPos && isInteracting) {
           ctx.beginPath(); ctx.moveTo(drawStartPos.x, drawStartPos.y); ctx.lineTo(mousePos.x, mousePos.y);
@@ -489,11 +531,12 @@
       }
     }
 
-    // --- UI & Panel Sync ---
+    // --- UI Synchronization & Expression Studio ---
     function syncUI() {
-      const b = bones.find(x => x.id === selectedBoneId);
+      const scene = getCurrentScene();
+      const b = scene.bones.find(x => x.id === selectedBoneId);
       if (!b) return;
-      document.getElementById('side-panel').style.display = 'flex';
+      document.getElementById('selected-bone-panel').style.display = 'flex';
       document.getElementById('texW').value = b.imgW; document.getElementById('texH').value = b.imgH;
       document.getElementById('texOffX').value = b.imgOffX; document.getElementById('texOffY').value = b.imgOffY;
       
@@ -504,10 +547,21 @@
       });
     }
 
+    function uploadBoneImage(e) {
+      const scene = getCurrentScene();
+      const b = scene.bones.find(x => x.id === selectedBoneId); if (!b || !e.target.files[0]) return;
+      const reader = new FileReader(); reader.onload = ev => {
+        const img = new Image(); img.onload = () => {
+          b.baseImage = img; b.imgW = img.width; b.imgH = img.height; syncUI(); autoUpdateKeyframe(b); saveProjectState();
+        }; img.src = ev.target.result;
+      }; reader.readAsDataURL(e.target.files[0]);
+    }
+
     function createNewExpression(e) {
-      const b = bones.find(x => x.id === selectedBoneId);
+      const scene = getCurrentScene();
+      const b = scene.bones.find(x => x.id === selectedBoneId);
       const name = document.getElementById('new-exp-name').value.trim();
-      if (!b || !name || !e.target.files.length) return alert("يرجى كتابة اسم التعبير واختيار الصور");
+      if (!b || !name || !e.target.files.length) return alert("اكتب اسم التعبير واختر الصور");
       
       b.expressions[name] = [];
       let loaded = 0;
@@ -516,7 +570,7 @@
         reader.onload = ev => {
           const img = new Image(); img.onload = () => {
             b.expressions[name][i] = img; loaded++;
-            if(loaded === e.target.files.length) { syncUI(); saveProjectToLocalStorage(); }
+            if(loaded === e.target.files.length) { syncUI(); saveProjectState(); }
           }; img.src = ev.target.result;
         }; reader.readAsDataURL(file);
       });
@@ -524,194 +578,147 @@
     }
 
     function addExpressionClip() {
-      const b = bones.find(x => x.id === selectedBoneId);
+      const scene = getCurrentScene();
+      const b = scene.bones.find(x => x.id === selectedBoneId);
       if (!b) return alert("اختر قطعة أولاً");
       const exprName = document.getElementById('select-clip-expr').value;
       if (!exprName) return alert("لا يوجد تعبير متاح");
 
-      expressionClips.push({
-        id: 'clip_' + Date.now(),
+      scene.expressionClips.push({
+        id: 'expr_' + Date.now(),
         boneId: b.id,
         exprName: exprName,
         startFrame: Math.round(currentFrame),
-        duration: 30 // default 30 frames
+        duration: 30
       });
       renderExpressionClips();
-      saveProjectToLocalStorage();
-    }
-
-    function uploadBoneImage(e) {
-      const b = bones.find(x => x.id === selectedBoneId); if (!b || !e.target.files[0]) return;
-      const reader = new FileReader(); reader.onload = ev => {
-        const img = new Image(); img.onload = () => {
-          b.baseImage = img; b.imgW = img.width; b.imgH = img.height; syncUI(); autoUpdateKeyframe(b); saveProjectToLocalStorage();
-        }; img.src = ev.target.result;
-      }; reader.readAsDataURL(e.target.files[0]);
+      saveProjectState();
     }
 
     function updateTex() {
-      const b = bones.find(x => x.id === selectedBoneId); if(!b) return;
+      const scene = getCurrentScene();
+      const b = scene.bones.find(x => x.id === selectedBoneId); if(!b) return;
       b.imgW = parseFloat(document.getElementById('texW').value); b.imgH = parseFloat(document.getElementById('texH').value);
       b.imgOffX = parseFloat(document.getElementById('texOffX').value); b.imgOffY = parseFloat(document.getElementById('texOffY').value);
-      saveProjectToLocalStorage();
+      saveProjectState();
     }
 
     // --- Keyframes & Copy/Paste ---
     function saveKeyframe() {
+      const scene = getCurrentScene();
       const state = {};
       const intFrame = Math.round(currentFrame);
-      bones.forEach(b => { state[b.id] = { x: b.x, y: b.y, angle: b.angle }; });
-      keyframes = keyframes.filter(k => k.frame !== intFrame);
-      keyframes.push({ frame: intFrame, states: state });
-      keyframes.sort((a,b) => a.frame - b.frame); 
+      scene.bones.forEach(b => { state[b.id] = { x: b.x, y: b.y, angle: b.angle }; });
+      scene.keyframes = scene.keyframes.filter(k => k.frame !== intFrame);
+      scene.keyframes.push({ frame: intFrame, states: state });
+      scene.keyframes.sort((a,b) => a.frame - b.frame);
       drawTimelineNodes();
-      saveProjectToLocalStorage();
+      saveProjectState();
     }
 
     function copyKeyframe() {
+      const scene = getCurrentScene();
       const intFrame = Math.round(currentFrame);
-      const kf = keyframes.find(k => k.frame === intFrame);
-      if (!kf) return alert("لا توجد لقطة رئيسية في هذا الإطار للنسخ!");
+      const kf = scene.keyframes.find(k => k.frame === intFrame);
+      if (!kf) return alert("لا توجد لقطة رئيسية في هذا الإطار!");
       copiedKeyframeData = JSON.parse(JSON.stringify(kf.states));
       alert("تم نسخ اللقطة بنجاح!");
     }
 
     function pasteKeyframe() {
-      if (!copiedKeyframeData) return alert("لم تقم بنسخ أي لقطة بعد!");
+      if (!copiedKeyframeData) return alert("لم تقم بالنسخ بعد!");
+      const scene = getCurrentScene();
       const intFrame = Math.round(currentFrame);
-      keyframes = keyframes.filter(k => k.frame !== intFrame);
-      keyframes.push({ frame: intFrame, states: copiedKeyframeData });
-      keyframes.sort((a,b) => a.frame - b.frame);
+      scene.keyframes = scene.keyframes.filter(k => k.frame !== intFrame);
+      scene.keyframes.push({ frame: intFrame, states: copiedKeyframeData });
+      scene.keyframes.sort((a,b) => a.frame - b.frame);
       drawTimelineNodes();
-      saveProjectToLocalStorage();
-      alert("تم لصق اللقطة في الإطار الحالي!");
+      saveProjectState();
+      alert("تم لصق اللقطة!");
     }
     
     function autoUpdateKeyframe(bone) {
-      let kf = keyframes.find(k => k.frame === Math.round(currentFrame));
-      if (kf && kf.states[bone.id]) { 
-        kf.states[bone.id] = { x: bone.x, y: bone.y, angle: bone.angle }; 
-        saveProjectToLocalStorage();
+      const scene = getCurrentScene();
+      let kf = scene.keyframes.find(k => k.frame === Math.round(currentFrame));
+      if (kf && kf.states[bone.id]) {
+        kf.states[bone.id] = { x: bone.x, y: bone.y, angle: bone.angle };
+        saveProjectState();
       }
     }
 
-    function deleteKeyframe() { 
-      keyframes = keyframes.filter(k => k.frame !== Math.round(currentFrame)); 
-      drawTimelineNodes(); 
-      saveProjectToLocalStorage();
+    function deleteKeyframe() {
+      const scene = getCurrentScene();
+      scene.keyframes = scene.keyframes.filter(k => k.frame !== Math.round(currentFrame));
+      drawTimelineNodes();
+      saveProjectState();
     }
 
     function updateTimelineScale() {
       maxFrames = parseInt(document.getElementById('max-frames').value) || 120;
+      getCurrentScene().duration = maxFrames;
       drawTimelineNodes();
       renderExpressionClips();
-      updateAudioVisual();
-      saveProjectToLocalStorage();
+      renderAudioClips();
+      saveProjectState();
     }
 
-    // --- Scrubbing & NLE Timeline Dragging ---
-    function startScrubbing(e) { isScrubbing = true; scrubTo(e); }
-    window.addEventListener('mousemove', e => { 
-      if(isScrubbing) scrubTo(e); 
-      if(isAudioDragging(e)) {};
-      if(draggingExprClipId) dragExpressionClipMove(e);
-    });
-    window.addEventListener('mouseup', () => { 
-      isScrubbing = false; isDraggingAudio = false; draggingExprClipId = null; 
-      saveProjectToLocalStorage();
-    });
-    
-    function scrubTo(e) {
-      const rect = document.getElementById('main-track').getBoundingClientRect();
-      let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      currentFrame = pct * maxFrames;
-      updateUIProgress(); evaluateFrame(currentFrame);
-      if(audioPlayer.src) audioPlayer.currentTime = Math.max(0, (currentFrame - audioStartFrame) / playSpeed);
+    // --- Multi-Audio Clips Management ---
+    async function recordAudioClip() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        let chunks = [];
+        mediaRecorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audio.onloadedmetadata = () => {
+            const durFrames = Math.round(audio.duration * playSpeed);
+            const scene = getCurrentScene();
+            scene.audioClips.push({
+              id: 'audio_' + Date.now(),
+              src: url,
+              startFrame: Math.round(currentFrame),
+              duration: durFrames
+            });
+            renderAudioClips();
+            saveProjectState();
+            alert("تم تسجيل المقطع الصوتي وإضافته بنجاح!");
+          };
+        };
+        mediaRecorder.start();
+        setTimeout(() => {
+          if(mediaRecorder.state === "recording") mediaRecorder.stop();
+        }, 6000); // Record up to 6s auto or manage
+        alert("جاري تسجيل الصوت... (سيستمر لمدة 6 ثوانٍ أو يمكنك إيقافه)");
+      } catch(err) { alert("يجب السماح بالمايكروفون"); }
     }
 
-    function updateUIProgress() {
-      document.getElementById('lbl-frame').innerText = Math.round(currentFrame);
-      document.getElementById('scrubber-line').style.left = `${(currentFrame / maxFrames) * 100}%`;
-    }
-
-    function drawTimelineNodes() {
-      const track = document.getElementById('main-track');
-      track.querySelectorAll('.kf-node').forEach(n => n.remove());
-      keyframes.forEach(k => {
-        const n = document.createElement('div'); n.className = 'kf-node'; 
-        n.style.left = `${(k.frame / maxFrames) * 100}%`; track.appendChild(n);
+    function renderAudioClips() {
+      const track = document.getElementById('audio-track');
+      track.innerHTML = '';
+      const scene = getCurrentScene();
+      scene.audioClips.forEach(clip => {
+        const div = document.createElement('div');
+        div.className = 'nle-clip audio-clip-item';
+        div.style.left = `${(clip.startFrame / maxFrames) * 100}%`;
+        div.style.width = `${(clip.duration / maxFrames) * 100}%`;
+        div.innerText = `🎵 مقطع صوتي (${Math.round(clip.duration/playSpeed)}ث)`;
+        div.onmousedown = (e) => {
+          draggingAudioId = clip.id;
+          audioDragStartX = e.clientX;
+          e.stopPropagation();
+        };
+        track.appendChild(div);
       });
     }
 
-    function togglePlay() {
-      isPlaying = !isPlaying;
-      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل";
-    }
-
-    // --- Audio NLE Block ---
-    async function toggleRecording() {
-      const btn = document.getElementById('btn-record');
-      if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        btn.innerText = "🎙️ تسجيل صوت"; btn.style.background = "#ef4444";
-      } else {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          mediaRecorder = new MediaRecorder(stream);
-          mediaRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); };
-          mediaRecorder.onstop = () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            audioPlayer.src = URL.createObjectURL(blob);
-            audioPlayer.onloadedmetadata = () => {
-              audioDurationFrames = audioPlayer.duration * playSpeed;
-              audioStartFrame = Math.round(currentFrame); 
-              updateAudioVisual();
-              saveProjectToLocalStorage();
-            };
-            audioChunks = [];
-          };
-          mediaRecorder.start();
-          btn.innerText = "⏹️ إيقاف التسجيل"; btn.style.background = "#3b82f6";
-        } catch(err) { alert("يجب السماح بالمايكروفون"); }
-      }
-    }
-
-    function syncAudioPlayback() {
-      if (!audioPlayer.src) return;
-      const expectedTime = (currentFrame - audioStartFrame) / playSpeed;
-      if (expectedTime >= 0 && expectedTime <= audioPlayer.duration) {
-        if (audioPlayer.paused) { audioPlayer.currentTime = expectedTime; audioPlayer.play().catch(()=>{}); }
-      } else {
-        if (!audioPlayer.paused) audioPlayer.pause();
-      }
-    }
-
-    const audioClipDiv = document.getElementById('audio-clip');
-    function startDragAudio(e) { isDraggingAudio = true; audioDragStartX = e.clientX; e.stopPropagation(); }
-    
-    function isAudioDragging(e) {
-      if (!isDraggingAudio) return false;
-      const trackWidth = document.getElementById('audio-track').clientWidth;
-      const deltaX = e.clientX - audioDragStartX;
-      audioDragStartX = e.clientX;
-      audioStartFrame += (deltaX / trackWidth) * maxFrames;
-      audioStartFrame = Math.max(0, Math.min(maxFrames, audioStartFrame));
-      updateAudioVisual();
-      return true;
-    }
-
-    function updateAudioVisual() {
-      if (!audioPlayer.src) { audioClipDiv.style.display = 'none'; return; }
-      audioClipDiv.style.display = 'flex';
-      audioClipDiv.style.left = `${(audioStartFrame / maxFrames) * 100}%`;
-      audioClipDiv.style.width = `${(audioDurationFrames / maxFrames) * 100}%`;
-    }
-
-    // --- Expression Clips NLE Rendering & Dragging ---
     function renderExpressionClips() {
       const track = document.getElementById('expr-track');
       track.innerHTML = '';
-      expressionClips.forEach(clip => {
+      const scene = getCurrentScene();
+      scene.expressionClips.forEach(clip => {
         const div = document.createElement('div');
         div.className = 'nle-clip expr-clip-item';
         div.style.left = `${(clip.startFrame / maxFrames) * 100}%`;
@@ -726,9 +733,40 @@
       });
     }
 
-    function dragExpressionClipMove(e) {
-      if (!draggingExprClipId) return;
-      const clip = expressionClips.find(c => c.id === draggingExprClipId);
+    // --- Dragging Clips & Scrubbing ---
+    function startScrubbing(e) { isScrubbing = true; scrubTo(e); }
+    window.addEventListener('mousemove', e => {
+      if (isScrubbing) scrubTo(e);
+      if (draggingAudioId) dragAudioMove(e);
+      if (draggingExprClipId) dragExpressionMove(e);
+    });
+    window.addEventListener('mouseup', () => {
+      isScrubbing = false; draggingAudioId = null; draggingExprClipId = null;
+      saveProjectState();
+    });
+
+    function scrubTo(e) {
+      const rect = document.getElementById('main-track').getBoundingClientRect();
+      let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      currentFrame = pct * maxFrames;
+      updateUIProgress(); evaluateFrame(currentFrame);
+    }
+
+    function dragAudioMove(e) {
+      const scene = getCurrentScene();
+      const clip = scene.audioClips.find(c => c.id === draggingAudioId);
+      if (!clip) return;
+      const trackWidth = document.getElementById('audio-track').clientWidth;
+      const deltaX = e.clientX - audioDragStartX;
+      audioDragStartX = e.clientX;
+      clip.startFrame += (deltaX / trackWidth) * maxFrames;
+      clip.startFrame = Math.max(0, Math.min(maxFrames - clip.duration, clip.startFrame));
+      renderAudioClips();
+    }
+
+    function dragExpressionMove(e) {
+      const scene = getCurrentScene();
+      const clip = scene.expressionClips.find(c => c.id === draggingExprClipId);
       if (!clip) return;
       const trackWidth = document.getElementById('expr-track').clientWidth;
       const deltaX = e.clientX - exprDragStartX;
@@ -738,19 +776,52 @@
       renderExpressionClips();
     }
 
-    // Helpers
+    function updateUIProgress() {
+      document.getElementById('lbl-frame').innerText = Math.round(currentFrame);
+      document.getElementById('scrubber-line').style.left = `${(currentFrame / maxFrames) * 100}%`;
+    }
+
+    function drawTimelineNodes() {
+      const scene = getCurrentScene();
+      const track = document.getElementById('main-track');
+      track.querySelectorAll('.kf-node').forEach(n => n.remove());
+      scene.keyframes.forEach(k => {
+        const n = document.createElement('div'); n.className = 'kf-node';
+        n.style.left = `${(k.frame / maxFrames) * 100}%`; track.appendChild(n);
+      });
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل";
+    }
+
+    // --- General Helpers ---
     function setMode(m) { mode = m; document.querySelectorAll('header button[id^=btn-mode]').forEach(b => b.classList.remove('active')); document.getElementById(`btn-mode-${m}`).classList.add('active'); }
     function toggleBoneVisibility() { showBones = !showBones; }
     function resizeCanvas() { canvas.width = document.getElementById('canvas-width-input').value; canvas.height = document.getElementById('canvas-height-input').value; }
-    function deleteSelectedBone() { if(!selectedBoneId) return; const ids = new Set([selectedBoneId]); let add = true; while(add){ add=false; bones.forEach(b=>{if(ids.has(b.parentId)&&!ids.has(b.id)){ids.add(b.id);add=true;}}); } bones=bones.filter(b=>!ids.has(b.id)); selectedBoneId=null; document.getElementById('side-panel').style.display='none'; saveProjectToLocalStorage(); }
-    function uploadBackground(e){ const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{bgImage=img; saveProjectToLocalStorage();}; img.src=ev.target.result; }; r.readAsDataURL(e.target.files[0]); }
-    function saveAutoSetting() { saveProjectToLocalStorage(); }
+    function deleteSelectedBone() {
+      if(!selectedBoneId) return;
+      const scene = getCurrentScene();
+      const ids = new Set([selectedBoneId]); let add = true;
+      while(add){ add=false; scene.bones.forEach(b=>{if(ids.has(b.parentId)&&!ids.has(b.id)){ids.add(b.id);add=true;}}); }
+      scene.bones = scene.bones.filter(b=>!ids.has(b.id));
+      selectedBoneId=null; document.getElementById('selected-bone-panel').style.display='none';
+      saveProjectState();
+    }
+    function uploadSceneBackground(e){
+      const r = new FileReader(); r.onload = ev => {
+        getCurrentScene().bgImgSrc = ev.target.result;
+        saveProjectState();
+      }; r.readAsDataURL(e.target.files[0]);
+    }
 
     // Init on Load
     window.onload = () => {
-      loadProjectFromLocalStorage();
+      loadProjectState();
       drawTimelineNodes();
       renderExpressionClips();
+      renderAudioClips();
     };
   </script>
 </body>
