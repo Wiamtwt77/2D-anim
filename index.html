@@ -2,20 +2,20 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Upload Studio - Pro Edition</title>
+  <title>Twencraft Upload Studio - NLE Pro Edition</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f1015; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-    header { background: #1a1b23; padding: 12px 20px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; z-index: 10; }
+    header { background: #1a1b23; padding: 10px 20px; border-bottom: 1px solid #2e313d; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; z-index: 10; }
     .tool-group { display: flex; gap: 8px; align-items: center; }
     
-    button { background: #2a2c37; border: 1px solid #3d4050; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+    button { background: #2a2c37; border: 1px solid #3d4050; color: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
     button:hover { background: #373a4a; transform: translateY(-1px); }
     button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.3); }
     button.accent { background: #10b981; border-color: #34d399; }
     button.danger { background: #ef4444; border-color: #f87171; }
-    input[type="number"], input[type="text"], select { background: #111217; border: 1px solid #3d4050; color: #fff; padding: 6px; border-radius: 4px; text-align: center; }
+    input[type="number"], input[type="text"], select { background: #111217; border: 1px solid #3d4050; color: #fff; padding: 6px; border-radius: 4px; text-align: center; font-size: 12px; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
     .canvas-container { flex: 1; background: #090a0d; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 20px; }
@@ -24,43 +24,49 @@
     .context-panel { position: absolute; top: 20px; right: 20px; background: rgba(26, 27, 35, 0.95); backdrop-filter: blur(10px); padding: 16px; border-radius: 8px; border: 1px solid #2e313d; display: flex; flex-direction: column; gap: 12px; width: 340px; max-height: calc(100% - 40px); overflow-y: auto; z-index: 20; }
     .context-panel h4 { font-size: 13px; color: #60a5fa; border-bottom: 1px solid #2e313d; padding-bottom: 6px; margin-top: 6px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
-    .field input[type="range"] { width: 120px; cursor: pointer; }
 
-    .timeline { height: 180px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 12px 24px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
-    .timeline-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    /* NLE Timeline Styles */
+    .timeline { height: 220px; background: #1a1b23; border-top: 1px solid #2e313d; padding: 10px 20px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+    .timeline-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
     
-    .track-container { position: relative; display: flex; flex-direction: column; gap: 4px; flex: 1; margin-top: 8px; }
-    .track { position: relative; height: 36px; background: #0f1015; border: 1px solid #2e313d; border-radius: 6px; cursor: pointer; overflow: hidden; width: 100%; }
-    .audio-track { height: 24px; background: #1e1e24; border: 1px dashed #3d4050; border-radius: 4px; position: relative; overflow: hidden; }
+    .tracks-container { position: relative; display: flex; flex-direction: column; gap: 4px; flex: 1; margin-top: 4px; overflow-x: auto; }
+    .track-label { font-size: 10px; color: #94a3b8; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; }
     
-    .scrubber { position: absolute; top: 0; width: 3px; height: 100%; background: #ef4444; pointer-events: none; z-index: 10; box-shadow: 0 0 8px #ef4444; }
-    .kf-node { position: absolute; top: 50%; width: 12px; height: 12px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 4; box-shadow: 0 0 10px #3b82f6; }
-    .audio-clip { position: absolute; top: 0; height: 100%; background: rgba(239, 68, 68, 0.4); border: 1px solid #ef4444; border-radius: 4px; cursor: grab; z-index: 5; display: flex; align-items: center; padding-left: 5px; font-size: 10px; color: #fff; }
-    .audio-clip:active { cursor: grabbing; background: rgba(239, 68, 68, 0.6); }
+    .track { position: relative; height: 32px; background: #0f1015; border: 1px solid #2e313d; border-radius: 4px; cursor: pointer; overflow: hidden; width: 100%; }
+    .scrubber { position: absolute; top: 0; width: 2px; height: 100%; background: #ef4444; pointer-events: none; z-index: 20; box-shadow: 0 0 8px #ef4444; }
+    
+    .kf-node { position: absolute; top: 50%; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%; transform: translate(-50%, -50%); z-index: 5; box-shadow: 0 0 8px #3b82f6; }
+    
+    /* NLE Clips (Audio & Expressions) */
+    .nle-clip { position: absolute; top: 3px; height: 26px; border-radius: 4px; cursor: grab; z-index: 6; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: #fff; font-weight: bold; overflow: hidden; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); }
+    .nle-clip:active { cursor: grabbing; opacity: 0.9; }
+    .audio-clip-item { background: rgba(239, 68, 68, 0.5); border-color: #ef4444; }
+    .expr-clip-item { background: rgba(16, 185, 129, 0.5); border-color: #10b981; }
 
-    .exp-box { background: #1e202a; padding: 8px; border-radius: 6px; border: 1px solid #3d4050; display: flex; flex-direction: column; gap: 8px; }
+    .exp-box { background: #1e202a; padding: 8px; border-radius: 6px; border: 1px solid #3d4050; display: flex; flex-direction: column; gap: 6px; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك الجسد</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك</button>
       <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم العظام</button>
-      <button onclick="toggleBoneVisibility()">👁️ إخفاء العظام</button>
+      <button onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
     </div>
     
     <div class="tool-group">
       <span style="font-size:12px;">المقاس:</span>
-      <input type="number" id="canvas-width-input" value="800" step="50" style="width:60px;" onchange="resizeCanvas()">
+      <input type="number" id="canvas-width-input" value="800" step="50" style="width:55px;" onchange="resizeCanvas()">
       <span style="font-size:12px;">×</span>
-      <input type="number" id="canvas-height-input" value="600" step="50" style="width:60px;" onchange="resizeCanvas()">
-      <button onclick="document.getElementById('bg-file').click()" style="margin-right:10px;">🖼️ خلفية</button>
+      <input type="number" id="canvas-height-input" value="600" step="50" style="width:55px;" onchange="resizeCanvas()">
+      <button onclick="document.getElementById('bg-file').click()">🖼️ خلفية</button>
       <input type="file" id="bg-file" accept="image/*" style="display:none;" onchange="uploadBackground(event)">
     </div>
 
     <div class="tool-group">
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف القطعة</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف</button>
+      <button onclick="clearLocalStorageData()" style="background:#475569; font-size:11px;">🔄 إعادة تعيين</button>
     </div>
   </header>
 
@@ -69,27 +75,34 @@
       <canvas id="stage" width="800" height="600"></canvas>
 
       <div class="context-panel" id="side-panel" style="display:none;">
-        <h3 id="panel-title" style="font-size:14px;">إعدادات القطعة</h3>
+        <h3 id="panel-title" style="font-size:14px;">خصائص القطعة</h3>
 
-        <h4>1. المظهر الأساسي</h4>
-        <button onclick="document.getElementById('bone-img-file').click()">📁 رفع صورة ثابتة</button>
+        <h4>1. المظهر</h4>
+        <button onclick="document.getElementById('bone-img-file').click()">📁 رفع صورة أساسية</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
-        <h4>2. نظام التعبيرات (المتغيرات)</h4>
+        <h4>2. إعدادات التعابير (مكتبة الصور المتتابعة)</h4>
         <div class="exp-box">
           <input type="text" id="new-exp-name" placeholder="اسم التعبير (مثال: غضب، كلام)">
-          <button onclick="document.getElementById('exp-file').click()" style="background:#0ea5e9;">➕ رفع صور متتابعة للتعبير</button>
+          <button onclick="document.getElementById('exp-file').click()" style="background:#0ea5e9;">➕ رفع صور التعبير</button>
           <input type="file" id="exp-file" accept="image/*" multiple style="display:none;" onchange="createNewExpression(event)">
           
-          <div class="field" style="margin-top: 8px; border-top: 1px solid #3d4050; padding-top: 8px;">
-            <label style="color:#a78bfa;">التعبير النشط:</label>
-            <select id="active-exp-select" onchange="setActiveExpression()"></select>
+          <div style="margin-top: 6px;">
+            <label style="font-size:11px; color:#a78bfa;">إضافة تعبير كمقطع (Clip) في التايم لاين:</label>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              <select id="select-clip-expr" style="flex:1;"></select>
+              <button onclick="addExpressionClip()" class="accent" style="padding:4px 8px;">إضافة مقطع</button>
+            </div>
           </div>
         </div>
 
-        <h4>3. الأبعاد والتحويلات</h4>
-        <div class="field"><label>العرض:</label><input type="number" id="texW" oninput="updateTex()"></div>
-        <div class="field"><label>الطول:</label><input type="number" id="texH" oninput="updateTex()"></div>
+        <h4>3. الأبعاد</h4>
+        <div class="field"><label>العرض/الطول:</label>
+          <div style="display:flex; gap:4px;">
+            <input type="number" id="texW" style="width:60px;" oninput="updateTex()">
+            <input type="number" id="texH" style="width:60px;" oninput="updateTex()">
+          </div>
+        </div>
         <div class="field"><label>إزاحة X/Y:</label>
           <div style="display:flex; gap:4px;">
             <input type="number" id="texOffX" style="width:50px;" oninput="updateTex()">
@@ -103,29 +116,47 @@
   <div class="timeline">
     <div class="timeline-controls">
       <div class="tool-group">
-        <button id="btn-play" onclick="togglePlay()" class="active" style="width: 100px;">▶ تشغيل</button>
-        <button onclick="saveKeyframe()" class="accent">➕ حفظ اللقطة</button>
-        <button class="danger" onclick="deleteKeyframe()">🗑️ حذف اللقطة</button>
+        <button id="btn-play" onclick="togglePlay()" class="active" style="width: 85px;">▶ تشغيل</button>
+        <button onclick="saveKeyframe()" class="accent">➕ حفظ لقطة</button>
+        <button onclick="copyKeyframe()">📋 نسخ</button>
+        <button onclick="pasteKeyframe()">📌 لصق</button>
+        <button class="danger" onclick="deleteKeyframe()">🗑️ حذف لقطة</button>
       </div>
 
-      <div class="tool-group" style="background: #111217; padding: 4px 10px; border-radius: 6px; border: 1px solid #3d4050;">
-        <span style="font-size:12px; color:#94a3b8;">إطارات الفيديو:</span>
-        <input type="number" id="max-frames" value="100" min="10" step="10" style="width:70px;" onchange="updateTimelineScale()">
+      <div class="tool-group">
+        <span style="font-size:11px; color:#94a3b8;">منحنى الحركة:</span>
+        <select id="easing-select" onchange="saveAutoSetting()">
+          <option value="smooth">ناعم (Smooth)</option>
+          <option value="linear">خطي (Linear)</option>
+          <option value="easeIn">تسارع (Ease In)</option>
+          <option value="easeOut">تباطؤ (Ease Out)</option>
+          <option value="bounce">ارتداد (Bounce)</option>
+        </select>
+        <span style="font-size:11px; color:#94a3b8;">إطارات:</span>
+        <input type="number" id="max-frames" value="120" min="20" step="10" style="width:55px;" onchange="updateTimelineScale()">
       </div>
 
       <div class="tool-group">
         <button id="btn-record" onclick="toggleRecording()" style="background:#ef4444; font-size:11px;">🎙️ تسجيل صوت</button>
       </div>
 
-      <span style="font-size: 14px; font-weight:bold;">الإطار: <b id="lbl-frame" style="color:#60a5fa; font-size:16px;">0</b></span>
+      <span style="font-size: 13px; font-weight:bold;">الإطار: <b id="lbl-frame" style="color:#60a5fa; font-size:15px;">0</b></span>
     </div>
     
-    <div class="track-container">
+    <div class="tracks-container" id="tracks-scroll">
+      <div class="track-label"><span>مسار الإطارات الرئيسية (Animation Keyframes)</span></div>
       <div class="track" id="main-track" onmousedown="startScrubbing(event)">
         <div class="scrubber" id="scrubber-line"></div>
       </div>
-      <div class="audio-track" id="audio-track">
-        <div class="audio-clip" id="audio-clip" style="display:none; left: 0%; width: 0%;">صوت 🎵</div>
+
+      <div class="track-label" style="margin-top:4px;"><span>مسار الصوت (Audio Track - اسحب الكتلة لتغيير مكانها)</span></div>
+      <div class="track" id="audio-track">
+        <div class="nle-clip audio-clip-item" id="audio-clip" style="display:none; left:0px; width:100px;" onmousedown="startDragAudio(event)">🎵 مقطع صوتي</div>
+      </div>
+
+      <div class="track-label" style="margin-top:4px;"><span>مسار التعابير (Expression Clips Track)</span></div>
+      <div class="track" id="expr-track">
+        <!-- Expression clips rendered dynamically -->
       </div>
     </div>
   </div>
@@ -134,63 +165,112 @@
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
 
-    // System States
     let mode = 'pose';
     let bones = [];
     let selectedBoneId = null;
     let keyframes = [];
+    let expressionClips = []; // NLE Clips for expressions: {id, boneId, exprName, startFrame, duration}
     let showBones = true;
     let bgImage = null;
 
-    // Animation & Smoothness
     let isPlaying = false;
-    let currentFrame = 0; // Float for sub-frame smoothness
-    let maxFrames = 100;
-    let playSpeed = 30; // 30 FPS playback speed
+    let currentFrame = 0; 
+    let maxFrames = 120;
+    let playSpeed = 30; 
     let lastTimestamp = 0;
     let animationReq = null;
+    let copiedKeyframeData = null;
 
-    // Interaction
     let isInteracting = false;
     let isScrubbing = false;
     let drawStartPos = null;
     let mousePos = { x: 0, y: 0 };
     let snapIndicator = null;
 
-    // Audio System
+    // Audio NLE states
     let mediaRecorder = null;
     let audioChunks = [];
     let audioPlayer = new Audio();
     let audioStartFrame = 0;
     let audioDurationFrames = 0;
     let isDraggingAudio = false;
+    let audioDragStartX = 0;
+
+    // Expression clip dragging
+    let draggingExprClipId = null;
+    let exprDragStartX = 0;
 
     class Bone {
       constructor(id, parentId, x, y, length, angle) {
-        this.id = id;
-        this.parentId = parentId;
-        // Local coordinates (Only used if no parent!)
-        this.x = x; 
-        this.y = y;
-        this.length = length;
-        this.angle = angle; // Angle relative to parent
-
-        // World coordinates (Calculated dynamically)
-        this.worldX = 0; this.worldY = 0; this.worldAngle = 0;
-        this._updated = false;
-
-        // Visuals
+        this.id = id; this.parentId = parentId;
+        this.x = x; this.y = y; this.length = length; this.angle = angle;
+        this.worldX = 0; this.worldY = 0; this.worldAngle = 0; this._updated = false;
         this.baseImage = null;
         this.imgW = 100; this.imgH = 100;
         this.imgOffX = 0; this.imgOffY = 0;
-        
-        // Expressions System (Variable based)
-        this.expressions = {}; // format: { "angry": [img1, img2], "talk": [img3, img4] }
+        this.expressions = {}; 
         this.activeExpression = "default";
       }
     }
 
-    // --- Core Engine & FK System ---
+    // --- Auto Save & Load ---
+    function saveProjectToLocalStorage() {
+      const data = {
+        bones: bones.map(b => ({
+          id: b.id, parentId: b.parentId, x: b.x, y: b.y, length: b.length, angle: b.angle,
+          imgW: b.imgW, imgH: b.imgH, imgOffX: b.imgOffX, imgOffY: b.imgOffY,
+          activeExpression: b.activeExpression,
+          // Convert image data URLs if stored or keep base
+          baseImageSrc: b.baseImage ? b.baseImage.src : null,
+          expressions: Object.fromEntries(Object.entries(b.expressions).map(([k, arr]) => [k, arr.map(img => img.src)]))
+        })),
+        keyframes, expressionClips, maxFrames,
+        audioSrc: audioPlayer.src ? audioPlayer.src : null,
+        audioStartFrame, audioDurationFrames
+      };
+      localStorage.setItem('twencraft_nle_project', JSON.stringify(data));
+    }
+
+    function loadProjectFromLocalStorage() {
+      const saved = localStorage.getItem('twencraft_nle_project');
+      if (!saved) return;
+      try {
+        const data = JSON.parse(saved);
+        maxFrames = data.maxFrames || 120;
+        document.getElementById('max-frames').value = maxFrames;
+        keyframes = data.keyframes || [];
+        expressionClips = data.expressionClips || [];
+        audioStartFrame = data.audioStartFrame || 0;
+        audioDurationFrames = data.audioDurationFrames || 0;
+        if (data.audioSrc) { audioPlayer.src = data.audioSrc; updateAudioVisual(); }
+
+        bones = (data.bones || []).map(bd => {
+          let b = new Bone(bd.id, bd.parentId, bd.x, bd.y, bd.length, bd.angle);
+          b.imgW = bd.imgW; b.imgH = bd.imgH; b.imgOffX = bd.imgOffX; b.imgOffY = bd.imgOffY;
+          b.activeExpression = bd.activeExpression || "default";
+          if (bd.baseImageSrc) {
+            let img = new Image(); img.src = bd.baseImageSrc; b.baseImage = img;
+          }
+          if (bd.expressions) {
+            b.expressions = {};
+            Object.keys(bd.expressions).forEach(k => {
+              b.expressions[k] = bd.expressions[k].map(src => { let im = new Image(); im.src = src; return im; });
+            });
+          }
+          return b;
+        });
+        updateTimelineScale();
+      } catch(e) { console.error("Error loading save:", e); }
+    }
+
+    function clearLocalStorageData() {
+      if(confirm("هل أنت متأكد من إعادة تعيين المشروع بالكامل؟")) {
+        localStorage.removeItem('twencraft_nle_project');
+        location.reload();
+      }
+    }
+
+    // --- Core FK Engine ---
     function updateTransforms() {
       bones.forEach(b => b._updated = false);
       bones.forEach(b => calculateWorld(b));
@@ -201,23 +281,19 @@
       if (bone.parentId) {
         const parent = bones.find(b => b.id === bone.parentId);
         if (parent) {
-          calculateWorld(parent); // Ensure parent is updated first
+          calculateWorld(parent);
           const parentRad = (parent.worldAngle * Math.PI) / 180;
-          // STRICT FK: Child strictly attached to parent's end point
           bone.worldX = parent.worldX + Math.cos(parentRad) * parent.length;
           bone.worldY = parent.worldY + Math.sin(parentRad) * parent.length;
           bone.worldAngle = parent.worldAngle + bone.angle;
         }
       } else {
-        // Root bones use their local x,y
-        bone.worldX = bone.x;
-        bone.worldY = bone.y;
-        bone.worldAngle = bone.angle;
+        bone.worldX = bone.x; bone.worldY = bone.y; bone.worldAngle = bone.angle;
       }
       bone._updated = true;
     }
 
-    // --- Main Loop (60FPS Buttery Smooth) ---
+    // --- Main 60FPS Engine ---
     function engineLoop(timestamp) {
       if (!lastTimestamp) lastTimestamp = timestamp;
       const dt = (timestamp - lastTimestamp) / 1000;
@@ -225,12 +301,10 @@
 
       if (isPlaying) {
         currentFrame += dt * playSpeed;
-        
         if (currentFrame > maxFrames) {
           currentFrame = 0;
           if (audioPlayer.src) { audioPlayer.pause(); audioPlayer.currentTime = 0; }
         }
-
         syncAudioPlayback();
         evaluateFrame(currentFrame);
         updateUIProgress();
@@ -242,37 +316,55 @@
     }
     requestAnimationFrame(engineLoop);
 
+    function applyEasing(t, type) {
+      if (type === 'linear') return t;
+      if (type === 'easeIn') return t * t;
+      if (type === 'easeOut') return t * (2 - t);
+      if (type === 'bounce') {
+        const n1 = 7.5625, d1 = 2.75;
+        if (t < 1 / d1) return n1 * t * t;
+        if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+        if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+        return n1 * (t -= 2.625 / d1) * t + 0.984375;
+      }
+      // Default Smooth
+      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    }
+
     function evaluateFrame(frame) {
+      // 1. Evaluate NLE Expression Clips (Video editing style overrides)
+      bones.forEach(b => {
+        let activeClip = expressionClips.find(c => c.boneId === b.id && frame >= c.startFrame && frame <= (c.startFrame + c.duration));
+        if (activeClip) {
+          b.activeExpression = activeClip.exprName;
+        }
+      });
+
       if (keyframes.length === 0) return;
       let kf1 = keyframes[0], kf2 = keyframes[keyframes.length - 1];
       for (let k of keyframes) { if (k.frame <= frame) kf1 = k; }
       for (let i = keyframes.length - 1; i >= 0; i--) { if (keyframes[i].frame >= frame) kf2 = keyframes[i]; }
 
+      const easingType = document.getElementById('easing-select').value;
+
       bones.forEach(b => {
         const s1 = kf1.states[b.id], s2 = kf2.states[b.id];
         if (s1 && s2 && kf1.frame !== kf2.frame) {
-          const t = (frame - kf1.frame) / (kf2.frame - kf1.frame);
-          // Easing (Smooth step)
-          const smoothT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; 
+          const t = Math.max(0, Math.min(1, (frame - kf1.frame) / (kf2.frame - kf1.frame)));
+          const smoothT = applyEasing(t, easingType);
           
-          if(!b.parentId) { // Interpolate position ONLY for root bones
+          if(!b.parentId) {
             b.x = s1.x + (s2.x - s1.x) * smoothT;
             b.y = s1.y + (s2.y - s1.y) * smoothT;
           }
-          
-          // Interpolate angle for all (Fixes shortest path rotation)
           let dAngle = s2.angle - s1.angle;
           while(dAngle > 180) dAngle -= 360;
           while(dAngle < -180) dAngle += 360;
           b.angle = s1.angle + dAngle * smoothT;
 
-          // Discrete state (Expression doesn't interpolate, it switches)
-          b.activeExpression = s1.expr || "default"; 
-
         } else if (s1) {
           if(!b.parentId) { b.x = s1.x; b.y = s1.y; }
           b.angle = s1.angle;
-          b.activeExpression = s1.expr || "default";
         }
       });
     }
@@ -343,24 +435,22 @@
           let ang = Math.atan2(dy, dx) * (180 / Math.PI);
           if (drawStartPos.pid) { ang -= bones.find(b => b.id === drawStartPos.pid).worldAngle; }
           const nb = new Bone('b_' + Date.now(), drawStartPos.pid, drawStartPos.x, drawStartPos.y, len, ang);
-          bones.push(nb); selectedBoneId = nb.id; syncUI();
+          bones.push(nb); selectedBoneId = nb.id; syncUI(); saveProjectToLocalStorage();
         }
         drawStartPos = null;
       }
     });
 
-    // --- Rendering ---
+    // --- Rendering Stage ---
     function drawStage() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (bgImage) ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
       bones.forEach(b => {
         let img = b.baseImage;
-        // Animated Expression Logic
         if (b.activeExpression !== "default" && b.expressions[b.activeExpression]) {
           const frames = b.expressions[b.activeExpression];
           if (frames.length > 0) {
-            // Animate expression: switch frame every 4 timeline frames
             const seqIndex = Math.floor(currentFrame / 4) % frames.length;
             img = frames[seqIndex];
           }
@@ -384,7 +474,6 @@
 
           ctx.beginPath(); ctx.moveTo(b.worldX, b.worldY); ctx.lineTo(eX, eY);
           ctx.lineWidth = isSel ? 5 : 3; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.5)'; ctx.stroke();
-          
           ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 6, 0, Math.PI*2);
           ctx.fillStyle = !b.parentId ? '#ef4444' : '#fff'; ctx.fill();
         });
@@ -400,7 +489,7 @@
       }
     }
 
-    // --- Expressions & UI Panel ---
+    // --- UI & Panel Sync ---
     function syncUI() {
       const b = bones.find(x => x.id === selectedBoneId);
       if (!b) return;
@@ -408,18 +497,17 @@
       document.getElementById('texW').value = b.imgW; document.getElementById('texH').value = b.imgH;
       document.getElementById('texOffX').value = b.imgOffX; document.getElementById('texOffY').value = b.imgOffY;
       
-      const sel = document.getElementById('active-exp-select');
-      sel.innerHTML = '<option value="default">الافتراضي (ثابت)</option>';
+      const sel = document.getElementById('select-clip-expr');
+      sel.innerHTML = '';
       Object.keys(b.expressions).forEach(expName => {
-        sel.innerHTML += `<option value="${expName}">${expName} (${b.expressions[expName].length} صور)</option>`;
+        sel.innerHTML += `<option value="${expName}">${expName}</option>`;
       });
-      sel.value = b.activeExpression;
     }
 
     function createNewExpression(e) {
       const b = bones.find(x => x.id === selectedBoneId);
       const name = document.getElementById('new-exp-name').value.trim();
-      if (!b || !name || !e.target.files.length) return alert("يرجى كتابة اسم التعبير أولاً (مثلاً: غضب)");
+      if (!b || !name || !e.target.files.length) return alert("يرجى كتابة اسم التعبير واختيار الصور");
       
       b.expressions[name] = [];
       let loaded = 0;
@@ -428,23 +516,35 @@
         reader.onload = ev => {
           const img = new Image(); img.onload = () => {
             b.expressions[name][i] = img; loaded++;
-            if(loaded === e.target.files.length) { b.activeExpression = name; syncUI(); autoUpdateKeyframe(b); }
+            if(loaded === e.target.files.length) { syncUI(); saveProjectToLocalStorage(); }
           }; img.src = ev.target.result;
         }; reader.readAsDataURL(file);
       });
       document.getElementById('new-exp-name').value = '';
     }
 
-    function setActiveExpression() {
+    function addExpressionClip() {
       const b = bones.find(x => x.id === selectedBoneId);
-      if(b) { b.activeExpression = document.getElementById('active-exp-select').value; autoUpdateKeyframe(b); }
+      if (!b) return alert("اختر قطعة أولاً");
+      const exprName = document.getElementById('select-clip-expr').value;
+      if (!exprName) return alert("لا يوجد تعبير متاح");
+
+      expressionClips.push({
+        id: 'clip_' + Date.now(),
+        boneId: b.id,
+        exprName: exprName,
+        startFrame: Math.round(currentFrame),
+        duration: 30 // default 30 frames
+      });
+      renderExpressionClips();
+      saveProjectToLocalStorage();
     }
 
     function uploadBoneImage(e) {
       const b = bones.find(x => x.id === selectedBoneId); if (!b || !e.target.files[0]) return;
       const reader = new FileReader(); reader.onload = ev => {
         const img = new Image(); img.onload = () => {
-          b.baseImage = img; b.imgW = img.width; b.imgH = img.height; syncUI(); autoUpdateKeyframe(b);
+          b.baseImage = img; b.imgW = img.width; b.imgH = img.height; syncUI(); autoUpdateKeyframe(b); saveProjectToLocalStorage();
         }; img.src = ev.target.result;
       }; reader.readAsDataURL(e.target.files[0]);
     }
@@ -453,34 +553,73 @@
       const b = bones.find(x => x.id === selectedBoneId); if(!b) return;
       b.imgW = parseFloat(document.getElementById('texW').value); b.imgH = parseFloat(document.getElementById('texH').value);
       b.imgOffX = parseFloat(document.getElementById('texOffX').value); b.imgOffY = parseFloat(document.getElementById('texOffY').value);
+      saveProjectToLocalStorage();
     }
 
-    // --- Keyframes ---
+    // --- Keyframes & Copy/Paste ---
     function saveKeyframe() {
       const state = {};
       const intFrame = Math.round(currentFrame);
-      bones.forEach(b => { state[b.id] = { x: b.x, y: b.y, angle: b.angle, expr: b.activeExpression }; });
+      bones.forEach(b => { state[b.id] = { x: b.x, y: b.y, angle: b.angle }; });
       keyframes = keyframes.filter(k => k.frame !== intFrame);
       keyframes.push({ frame: intFrame, states: state });
-      keyframes.sort((a,b) => a.frame - b.frame); drawTimelineNodes();
+      keyframes.sort((a,b) => a.frame - b.frame); 
+      drawTimelineNodes();
+      saveProjectToLocalStorage();
+    }
+
+    function copyKeyframe() {
+      const intFrame = Math.round(currentFrame);
+      const kf = keyframes.find(k => k.frame === intFrame);
+      if (!kf) return alert("لا توجد لقطة رئيسية في هذا الإطار للنسخ!");
+      copiedKeyframeData = JSON.parse(JSON.stringify(kf.states));
+      alert("تم نسخ اللقطة بنجاح!");
+    }
+
+    function pasteKeyframe() {
+      if (!copiedKeyframeData) return alert("لم تقم بنسخ أي لقطة بعد!");
+      const intFrame = Math.round(currentFrame);
+      keyframes = keyframes.filter(k => k.frame !== intFrame);
+      keyframes.push({ frame: intFrame, states: copiedKeyframeData });
+      keyframes.sort((a,b) => a.frame - b.frame);
+      drawTimelineNodes();
+      saveProjectToLocalStorage();
+      alert("تم لصق اللقطة في الإطار الحالي!");
     }
     
     function autoUpdateKeyframe(bone) {
       let kf = keyframes.find(k => k.frame === Math.round(currentFrame));
-      if (kf && kf.states[bone.id]) { kf.states[bone.id] = { x: bone.x, y: bone.y, angle: bone.angle, expr: bone.activeExpression }; }
+      if (kf && kf.states[bone.id]) { 
+        kf.states[bone.id] = { x: bone.x, y: bone.y, angle: bone.angle }; 
+        saveProjectToLocalStorage();
+      }
     }
 
-    function deleteKeyframe() { keyframes = keyframes.filter(k => k.frame !== Math.round(currentFrame)); drawTimelineNodes(); }
+    function deleteKeyframe() { 
+      keyframes = keyframes.filter(k => k.frame !== Math.round(currentFrame)); 
+      drawTimelineNodes(); 
+      saveProjectToLocalStorage();
+    }
 
-    // --- Timeline & Audio Draggable UI ---
     function updateTimelineScale() {
-      maxFrames = parseInt(document.getElementById('max-frames').value) || 100;
+      maxFrames = parseInt(document.getElementById('max-frames').value) || 120;
       drawTimelineNodes();
+      renderExpressionClips();
+      updateAudioVisual();
+      saveProjectToLocalStorage();
     }
 
+    // --- Scrubbing & NLE Timeline Dragging ---
     function startScrubbing(e) { isScrubbing = true; scrubTo(e); }
-    window.addEventListener('mousemove', e => { if(isScrubbing) scrubTo(e); });
-    window.addEventListener('mouseup', () => { isScrubbing = false; });
+    window.addEventListener('mousemove', e => { 
+      if(isScrubbing) scrubTo(e); 
+      if(isAudioDragging(e)) {};
+      if(draggingExprClipId) dragExpressionClipMove(e);
+    });
+    window.addEventListener('mouseup', () => { 
+      isScrubbing = false; isDraggingAudio = false; draggingExprClipId = null; 
+      saveProjectToLocalStorage();
+    });
     
     function scrubTo(e) {
       const rect = document.getElementById('main-track').getBoundingClientRect();
@@ -502,7 +641,6 @@
         const n = document.createElement('div'); n.className = 'kf-node'; 
         n.style.left = `${(k.frame / maxFrames) * 100}%`; track.appendChild(n);
       });
-      updateAudioVisual();
     }
 
     function togglePlay() {
@@ -510,7 +648,7 @@
       document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل";
     }
 
-    // Audio Recorder & Logic
+    // --- Audio NLE Block ---
     async function toggleRecording() {
       const btn = document.getElementById('btn-record');
       if (mediaRecorder && mediaRecorder.state === "recording") {
@@ -528,6 +666,7 @@
               audioDurationFrames = audioPlayer.duration * playSpeed;
               audioStartFrame = Math.round(currentFrame); 
               updateAudioVisual();
+              saveProjectToLocalStorage();
             };
             audioChunks = [];
           };
@@ -547,20 +686,19 @@
       }
     }
 
-    // Audio Draggable Block UI
     const audioClipDiv = document.getElementById('audio-clip');
-    const audioTrackDiv = document.getElementById('audio-track');
+    function startDragAudio(e) { isDraggingAudio = true; audioDragStartX = e.clientX; e.stopPropagation(); }
     
-    audioClipDiv.addEventListener('mousedown', (e) => { isDraggingAudio = true; e.stopPropagation(); });
-    window.addEventListener('mousemove', (e) => {
-      if (isDraggingAudio) {
-        const rect = audioTrackDiv.getBoundingClientRect();
-        let pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        audioStartFrame = pct * maxFrames;
-        updateAudioVisual();
-      }
-    });
-    window.addEventListener('mouseup', () => { isDraggingAudio = false; });
+    function isAudioDragging(e) {
+      if (!isDraggingAudio) return false;
+      const trackWidth = document.getElementById('audio-track').clientWidth;
+      const deltaX = e.clientX - audioDragStartX;
+      audioDragStartX = e.clientX;
+      audioStartFrame += (deltaX / trackWidth) * maxFrames;
+      audioStartFrame = Math.max(0, Math.min(maxFrames, audioStartFrame));
+      updateAudioVisual();
+      return true;
+    }
 
     function updateAudioVisual() {
       if (!audioPlayer.src) { audioClipDiv.style.display = 'none'; return; }
@@ -569,12 +707,51 @@
       audioClipDiv.style.width = `${(audioDurationFrames / maxFrames) * 100}%`;
     }
 
-    // Setup Helpers
+    // --- Expression Clips NLE Rendering & Dragging ---
+    function renderExpressionClips() {
+      const track = document.getElementById('expr-track');
+      track.innerHTML = '';
+      expressionClips.forEach(clip => {
+        const div = document.createElement('div');
+        div.className = 'nle-clip expr-clip-item';
+        div.style.left = `${(clip.startFrame / maxFrames) * 100}%`;
+        div.style.width = `${(clip.duration / maxFrames) * 100}%`;
+        div.innerText = `😊 ${clip.exprName}`;
+        div.onmousedown = (e) => {
+          draggingExprClipId = clip.id;
+          exprDragStartX = e.clientX;
+          e.stopPropagation();
+        };
+        track.appendChild(div);
+      });
+    }
+
+    function dragExpressionClipMove(e) {
+      if (!draggingExprClipId) return;
+      const clip = expressionClips.find(c => c.id === draggingExprClipId);
+      if (!clip) return;
+      const trackWidth = document.getElementById('expr-track').clientWidth;
+      const deltaX = e.clientX - exprDragStartX;
+      exprDragStartX = e.clientX;
+      clip.startFrame += (deltaX / trackWidth) * maxFrames;
+      clip.startFrame = Math.max(0, Math.min(maxFrames - clip.duration, clip.startFrame));
+      renderExpressionClips();
+    }
+
+    // Helpers
     function setMode(m) { mode = m; document.querySelectorAll('header button[id^=btn-mode]').forEach(b => b.classList.remove('active')); document.getElementById(`btn-mode-${m}`).classList.add('active'); }
     function toggleBoneVisibility() { showBones = !showBones; }
     function resizeCanvas() { canvas.width = document.getElementById('canvas-width-input').value; canvas.height = document.getElementById('canvas-height-input').value; }
-    function deleteSelectedBone() { if(!selectedBoneId) return; const ids = new Set([selectedBoneId]); let add = true; while(add){ add=false; bones.forEach(b=>{if(ids.has(b.parentId)&&!ids.has(b.id)){ids.add(b.id);add=true;}}); } bones=bones.filter(b=>!ids.has(b.id)); selectedBoneId=null; document.getElementById('side-panel').style.display='none'; }
-    function uploadBackground(e){ const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>bgImage=img; img.src=ev.target.result; }; r.readAsDataURL(e.target.files[0]); }
+    function deleteSelectedBone() { if(!selectedBoneId) return; const ids = new Set([selectedBoneId]); let add = true; while(add){ add=false; bones.forEach(b=>{if(ids.has(b.parentId)&&!ids.has(b.id)){ids.add(b.id);add=true;}}); } bones=bones.filter(b=>!ids.has(b.id)); selectedBoneId=null; document.getElementById('side-panel').style.display='none'; saveProjectToLocalStorage(); }
+    function uploadBackground(e){ const r=new FileReader(); r.onload=ev=>{ const img=new Image(); img.onload=()=>{bgImage=img; saveProjectToLocalStorage();}; img.src=ev.target.result; }; r.readAsDataURL(e.target.files[0]); }
+    function saveAutoSetting() { saveProjectToLocalStorage(); }
+
+    // Init on Load
+    window.onload = () => {
+      loadProjectFromLocalStorage();
+      drawTimelineNodes();
+      renderExpressionClips();
+    };
   </script>
 </body>
 </html>
