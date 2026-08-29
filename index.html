@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Studio - Ultimate Director Edition</title>
+  <title>Twencraft Studio - Free Rigging Edition</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0a0b0e; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -15,14 +15,13 @@
     button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
     button.accent { background: #10b981; border-color: #34d399; }
     button.danger { background: #ef4444; border-color: #f87171; }
-    button.warning { background: #f59e0b; border-color: #fbbf24; color: #000; }
     input[type="number"], input[type="text"], select { background: #0e1017; border: 1px solid #30364f; color: #fff; padding: 5px; border-radius: 4px; text-align: center; font-size: 12px; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
     .canvas-container { flex: 1; background: #050608; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 10px; }
     canvas { background: #0e1017; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); cursor: crosshair; }
 
-    /* Sidebar & Director Panel */
+    /* Sidebar & Properties Studio */
     .sidebar { width: 320px; background: #14161f; border-left: 1px solid #1f2333; display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto; z-index: 20; }
     .sidebar h4 { font-size: 12px; color: #60a5fa; border-bottom: 1px solid #1f2333; padding-bottom: 4px; margin-top: 4px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px; }
@@ -51,14 +50,9 @@
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك</button>
-      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم</button>
-      <button id="btn-mode-weld" class="warning" onclick="setMode('weld')">🔗 ربط المفاصل</button>
-      <select id="draw-bone-type" title="نوع العظمة عند الرسم">
-        <option value="normal">عظمة تتصل تلقائياً</option>
-        <option value="root">عظمة جذر جديدة (أحمر)</option>
-      </select>
-      <button onclick="toggleBoneVisibility()">👁️ إخفاء</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك ومفاصل</button>
+      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم حر</button>
+      <button onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
     </div>
     
     <div class="tool-group">
@@ -71,7 +65,7 @@
     </div>
 
     <div class="tool-group">
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
       <button onclick="clearLocalStorageData()" style="background:#334155; font-size:11px;">🔄 إعادة ضبط</button>
     </div>
   </header>
@@ -181,9 +175,8 @@
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
 
-    let mode = 'pose'; // pose, draw, weld
+    let mode = 'pose'; // pose, draw
     let showBones = true;
-    let weldSourceBoneId = null; // للتخزين المؤقت أثناء وضع الربط
     
     let scenes = [
       { id: 'scene_1', title: 'المشهد الأول 🎬', duration: 120, bgImgSrc: null, bones: [], keyframes: [], expressionClips: [], audioClips: [] }
@@ -201,8 +194,8 @@
     let isInteracting = false;
     let isScrubbing = false;
     let drawStartPos = null;
+    let drawParentId = null;
     let mousePos = { x: 0, y: 0 };
-    let snapIndicator = null;
     let draggingAudioId = null;
     let audioDragStartX = 0;
     let draggingExprClipId = null;
@@ -229,11 +222,11 @@
     function saveProjectState() {
       const scene = getCurrentScene();
       scene.duration = maxFrames;
-      localStorage.setItem('twencraft_ultimate_project', JSON.stringify({ scenes, currentSceneId }));
+      localStorage.setItem('twencraft_free_rig_project', JSON.stringify({ scenes, currentSceneId }));
     }
 
     function loadProjectState() {
-      const saved = localStorage.getItem('twencraft_ultimate_project');
+      const saved = localStorage.getItem('twencraft_free_rig_project');
       if (!saved) return;
       try {
         const data = JSON.parse(saved);
@@ -268,7 +261,7 @@
 
     function clearLocalStorageData() {
       if(confirm("هل تريد إعادة ضبط المشروع بالكامل؟")) {
-        localStorage.removeItem('twencraft_ultimate_project');
+        localStorage.removeItem('twencraft_free_rig_project');
         location.reload();
       }
     }
@@ -299,7 +292,6 @@
       document.getElementById('max-frames').value = maxFrames;
       currentFrame = 0;
       selectedBoneId = null;
-      weldSourceBoneId = null;
       document.getElementById('selected-bone-panel').style.display = 'none';
       renderScenesList();
       updateTimelineScale();
@@ -426,41 +418,24 @@
       isInteracting = true;
       const scene = getCurrentScene();
 
-      if (mode === 'weld') {
-        // وضع ربط الجذور
-        let clickedBone = null;
+      if (mode === 'draw') {
+        // فحص ما إذا كان البداية قريبة من أي مفصل أو نهاية عظمة للربط التلقائي الحر
+        drawParentId = null;
+        let startX = mousePos.x;
+        let startY = mousePos.y;
+
         for (let b of scene.bones) {
           const rad = (b.worldAngle * Math.PI) / 180;
-          const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
-          if (Math.hypot(mousePos.x - b.worldX, mousePos.y - b.worldY) < 25 || Math.hypot(mousePos.x - eX, mousePos.y - eY) < 25) {
-            clickedBone = b;
+          const eX = b.worldX + Math.cos(rad) * b.length;
+          const eY = b.worldY + Math.sin(rad) * b.length;
+
+          // إذا بدأنا الرسم قرب نهاية عظمة، نربطها تلقائياً بها
+          if (Math.hypot(mousePos.x - eX, mousePos.y - eY) < 20) {
+            drawParentId = b.id;
             break;
           }
         }
-        if (clickedBone) {
-          if (!weldSourceBoneId) {
-            weldSourceBoneId = clickedBone.id;
-            alert(`تم تحديد العظمة الجذر "${clickedBone.id}" (ذات الرأس الأحمر). الآن اضغط على العظمة المستهدفة التي تريد وصلها بها.`);
-          } else {
-            if (weldSourceBoneId === clickedBone.id) {
-              alert("لا يمكنك ربط العظمة بنفسها!");
-              weldSourceBoneId = null;
-              return;
-            }
-            const srcBone = scene.bones.find(b => b.id === weldSourceBoneId);
-            srcBone.parentId = clickedBone.id;
-            alert(`تم ربط العظمة بنجاح وأصبح رأسها الأحمر متصلاً بالمفصل الجديد!`);
-            weldSourceBoneId = null;
-            saveProjectState();
-            setMode('pose');
-          }
-        }
-        return;
-      }
-
-      if (mode === 'draw') {
-        const boneType = document.getElementById('draw-bone-type').value;
-        drawStartPos = { pid: null, x: mousePos.x, y: mousePos.y };
+        drawStartPos = { x: startX, y: startY };
       } else {
         selectedBoneId = null;
         for (let b of scene.bones) {
@@ -502,13 +477,17 @@
       if (mode === 'draw' && drawStartPos) {
         const dx = mousePos.x - drawStartPos.x, dy = mousePos.y - drawStartPos.y;
         const len = Math.hypot(dx, dy);
-        if (len > 15) {
-          const boneType = document.getElementById('draw-bone-type').value;
-          const pid = (boneType === 'root') ? null : null; // عظمة جذر برأس أحمر مستقل
-          const nb = new Bone('b_' + Date.now(), pid, drawStartPos.x, drawStartPos.y, len, Math.atan2(dy, dx) * (180 / Math.PI));
+        if (len > 10) {
+          let initialAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+          if (drawParentId) {
+            const parentBone = scene.bones.find(b => b.id === drawParentId);
+            if (parentBone) initialAngle -= parentBone.worldAngle;
+          }
+          const nb = new Bone('b_' + Date.now(), drawParentId, drawStartPos.x, drawStartPos.y, len, initialAngle);
           scene.bones.push(nb); selectedBoneId = nb.id; syncUI(); saveProjectState();
         }
         drawStartPos = null;
+        drawParentId = null;
       }
     });
 
@@ -547,26 +526,24 @@
 
       if (showBones) {
         scene.bones.forEach(b => {
-          const isSel = b.id === selectedBoneId || b.id === weldSourceBoneId;
+          const isSel = b.id === selectedBoneId;
           const rad = (b.worldAngle * Math.PI) / 180;
           const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
 
           ctx.beginPath(); ctx.moveTo(b.worldX, b.worldY); ctx.lineTo(eX, eY);
           ctx.lineWidth = isSel ? 4 : 2; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.4)'; ctx.stroke();
           
-          // نقطة بداية العظمة (الجذر) - حمراء إذا كان جذر، بيضاء إذا كان متصلاً بأب
-          ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 6, 0, Math.PI*2);
-          ctx.fillStyle = !b.parentId ? '#ef4444' : '#fff'; ctx.fill();
-          if (b.id === weldSourceBoneId) { ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3; ctx.stroke(); }
+          // مفاصل نظيفة ومتساوية للجميع بدون تعقيد
+          ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 5, 0, Math.PI*2);
+          ctx.fillStyle = '#fff'; ctx.fill();
           
-          // نقطة نهاية العظمة (الرأس/المفصل) - بيضاء
           ctx.beginPath(); ctx.arc(eX, eY, 4, 0, Math.PI*2);
           ctx.fillStyle = isSel ? '#60a5fa' : '#94a3b8'; ctx.fill();
         });
 
         if (drawStartPos && isInteracting) {
           ctx.beginPath(); ctx.moveTo(drawStartPos.x, drawStartPos.y); ctx.lineTo(mousePos.x, mousePos.y);
-          ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
         }
       }
     }
@@ -581,7 +558,7 @@
       document.getElementById('texAngle').value = b.imgAngle;
 
       const parentSel = document.getElementById('bone-parent-select');
-      parentSel.innerHTML = '<option value="">(بدون أب - جذر أحمر)</option>';
+      parentSel.innerHTML = '<option value="">(عظمة حرة - بدون أب)</option>';
       scene.bones.forEach(other => {
         if(other.id !== b.id) {
           parentSel.innerHTML += `<option value="${other.id}" ${other.id === b.parentId ? 'selected' : ''}>${other.id}</option>`;
@@ -832,7 +809,6 @@
       mode = m;
       document.querySelectorAll('header button[id^=btn-mode]').forEach(b => b.classList.remove('active'));
       document.getElementById(`btn-mode-${m}`).classList.add('active');
-      if(m !== 'weld') { weldSourceBoneId = null; }
     }
 
     function toggleBoneVisibility() { showBones = !showBones; }
