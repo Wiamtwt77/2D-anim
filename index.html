@@ -15,6 +15,7 @@
     button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
     button.accent { background: #10b981; border-color: #34d399; }
     button.danger { background: #ef4444; border-color: #f87171; }
+    button.warning { background: #f59e0b; border-color: #fbbf24; color: #000; }
     input[type="number"], input[type="text"], select { background: #0e1017; border: 1px solid #30364f; color: #fff; padding: 5px; border-radius: 4px; text-align: center; font-size: 12px; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
@@ -50,13 +51,14 @@
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك المفاصل</button>
-      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم العظام</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك</button>
+      <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم</button>
+      <button id="btn-mode-weld" class="warning" onclick="setMode('weld')">🔗 ربط المفاصل</button>
       <select id="draw-bone-type" title="نوع العظمة عند الرسم">
-        <option value="normal">🔗 عظمة عادية (تتصل)</option>
-        <option value="root">🌟 عظمة جذر (مستقلة)</option>
+        <option value="normal">عظمة تتصل تلقائياً</option>
+        <option value="root">عظمة جذر جديدة (أحمر)</option>
       </select>
-      <button onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
+      <button onclick="toggleBoneVisibility()">👁️ إخفاء</button>
     </div>
     
     <div class="tool-group">
@@ -64,12 +66,12 @@
       <input type="number" id="canvas-width-input" value="800" step="50" style="width:50px;" onchange="resizeCanvas()">
       <span style="font-size:11px;">×</span>
       <input type="number" id="canvas-height-input" value="600" step="50" style="width:50px;" onchange="resizeCanvas()">
-      <button onclick="document.getElementById('bg-file').click()">🖼️ خلفية المشهد</button>
+      <button onclick="document.getElementById('bg-file').click()">🖼️ خلفية</button>
       <input type="file" id="bg-file" accept="image/*" style="display:none;" onchange="uploadSceneBackground(event)">
     </div>
 
     <div class="tool-group">
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العنصر</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف</button>
       <button onclick="clearLocalStorageData()" style="background:#334155; font-size:11px;">🔄 إعادة ضبط</button>
     </div>
   </header>
@@ -81,9 +83,9 @@
 
     <!-- Sidebar & Properties Studio -->
     <div class="sidebar">
-      <h4>🎬 تتابع المشاهد (Scene Director)</h4>
+      <h4>🎬 تتابع المشاهد</h4>
       <div id="scenes-list"></div>
-      <button onclick="addNewScene()" class="accent" style="width:100%;">➕ إضافة مشهد جديد للتتابع</button>
+      <button onclick="addNewScene()" class="accent" style="width:100%;">➕ إضافة مشهد جديد</button>
 
       <div id="selected-bone-panel" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
         <h4 id="panel-title">خصائص العظمة والسبرايت</h4>
@@ -124,7 +126,7 @@
             <input type="number" id="texOffY" style="width:45px;" oninput="updateTex()">
           </div>
         </div>
-        <div class="field"><label>زاوية السبرايت (Sprite Angle):</label>
+        <div class="field"><label>زاوية السبرايت:</label>
           <input type="number" id="texAngle" style="width:60px;" oninput="updateTex()">
         </div>
       </div>
@@ -134,7 +136,7 @@
   <div class="director-panel">
     <div class="timeline-controls">
       <div class="tool-group">
-        <button id="btn-play" onclick="togglePlay()" class="active" style="width: 85px;">▶ تشغيل متسلسل</button>
+        <button id="btn-play" onclick="togglePlay()" class="active" style="width: 85px;">▶ تشغيل</button>
         <button onclick="saveKeyframe()" class="accent">➕ حفظ لقطة</button>
         <button onclick="copyKeyframe()">📋 نسخ</button>
         <button onclick="pasteKeyframe()">📌 لصق</button>
@@ -158,7 +160,7 @@
         <button onclick="recordAudioClip()" style="background:#ef4444; font-size:11px;">🎙️ تسجيل صوت</button>
       </div>
 
-      <span style="font-size: 12px; font-weight:bold;">المشهد الحالي: <b id="lbl-scene" style="color:#38bdf8;">1</b> | الإطار: <b id="lbl-frame" style="color:#60a5fa; font-size:14px;">0</b></span>
+      <span style="font-size: 12px; font-weight:bold;">المشهد: <b id="lbl-scene" style="color:#38bdf8;">1</b> | الإطار: <b id="lbl-frame" style="color:#60a5fa; font-size:14px;">0</b></span>
     </div>
     
     <div class="tracks-container" id="tracks-scroll">
@@ -167,10 +169,10 @@
         <div class="scrubber" id="scrubber-line"></div>
       </div>
 
-      <div class="track-label" style="margin-top:3px;"><span>مسار المقاطع الصوتية (Audio Clips Track)</span></div>
+      <div class="track-label" style="margin-top:3px;"><span>مسار المقاطع الصوتية</span></div>
       <div class="track" id="audio-track"></div>
 
-      <div class="track-label" style="margin-top:3px;"><span>مسار التعابير (Expression Clips Track)</span></div>
+      <div class="track-label" style="margin-top:3px;"><span>مسار التعابير</span></div>
       <div class="track" id="expr-track"></div>
     </div>
   </div>
@@ -179,8 +181,9 @@
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
 
-    let mode = 'pose';
+    let mode = 'pose'; // pose, draw, weld
     let showBones = true;
+    let weldSourceBoneId = null; // للتخزين المؤقت أثناء وضع الربط
     
     let scenes = [
       { id: 'scene_1', title: 'المشهد الأول 🎬', duration: 120, bgImgSrc: null, bones: [], keyframes: [], expressionClips: [], audioClips: [] }
@@ -296,6 +299,7 @@
       document.getElementById('max-frames').value = maxFrames;
       currentFrame = 0;
       selectedBoneId = null;
+      weldSourceBoneId = null;
       document.getElementById('selected-bone-panel').style.display = 'none';
       renderScenesList();
       updateTimelineScale();
@@ -335,7 +339,6 @@
 
       if (isPlaying) {
         currentFrame += dt * playSpeed;
-        const currentScene = getCurrentScene();
         if (currentFrame > maxFrames) {
           const currentIndex = scenes.findIndex(s => s.id === currentSceneId);
           if (currentIndex < scenes.length - 1) {
@@ -418,38 +421,46 @@
       return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
     }
 
-    function getSnap(pos) {
-      const scene = getCurrentScene();
-      for (let b of scene.bones) {
-        const rad = (b.worldAngle * Math.PI) / 180;
-        const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
-        
-        // 1. الالتقاط من نهاية العظمة (النقطة البيضاء) -> الأب هو هذه العظمة
-        if (Math.hypot(pos.x - eX, pos.y - eY) < 25) {
-          return { id: b.id, x: eX, y: eY, type: 'tip' };
-        }
-        // 2. الالتقاط من بداية العظمة (النقطة الحمراء) -> الأب هو أبو هذه العظمة
-        if (Math.hypot(pos.x - b.worldX, pos.y - b.worldY) < 25) {
-          return { id: b.parentId, x: b.worldX, y: b.worldY, type: 'base' };
-        }
-      }
-      return null;
-    }
-
     canvas.addEventListener('mousedown', (e) => {
       mousePos = getMouse(e);
       isInteracting = true;
       const scene = getCurrentScene();
 
+      if (mode === 'weld') {
+        // وضع ربط الجذور
+        let clickedBone = null;
+        for (let b of scene.bones) {
+          const rad = (b.worldAngle * Math.PI) / 180;
+          const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
+          if (Math.hypot(mousePos.x - b.worldX, mousePos.y - b.worldY) < 25 || Math.hypot(mousePos.x - eX, mousePos.y - eY) < 25) {
+            clickedBone = b;
+            break;
+          }
+        }
+        if (clickedBone) {
+          if (!weldSourceBoneId) {
+            weldSourceBoneId = clickedBone.id;
+            alert(`تم تحديد العظمة الجذر "${clickedBone.id}" (ذات الرأس الأحمر). الآن اضغط على العظمة المستهدفة التي تريد وصلها بها.`);
+          } else {
+            if (weldSourceBoneId === clickedBone.id) {
+              alert("لا يمكنك ربط العظمة بنفسها!");
+              weldSourceBoneId = null;
+              return;
+            }
+            const srcBone = scene.bones.find(b => b.id === weldSourceBoneId);
+            srcBone.parentId = clickedBone.id;
+            alert(`تم ربط العظمة بنجاح وأصبح رأسها الأحمر متصلاً بالمفصل الجديد!`);
+            weldSourceBoneId = null;
+            saveProjectState();
+            setMode('pose');
+          }
+        }
+        return;
+      }
+
       if (mode === 'draw') {
         const boneType = document.getElementById('draw-bone-type').value;
-        const snap = (boneType === 'normal') ? getSnap(mousePos) : null;
-        
-        if (snap) {
-          drawStartPos = { pid: snap.id, x: snap.x, y: snap.y };
-        } else {
-          drawStartPos = { pid: null, x: mousePos.x, y: mousePos.y };
-        }
+        drawStartPos = { pid: null, x: mousePos.x, y: mousePos.y };
       } else {
         selectedBoneId = null;
         for (let b of scene.bones) {
@@ -465,11 +476,8 @@
 
     canvas.addEventListener('mousemove', (e) => {
       mousePos = getMouse(e);
-      const scene = getCurrentScene();
-      const boneType = document.getElementById('draw-bone-type')?.value || 'normal';
-      snapIndicator = (mode === 'draw' && !isInteracting && boneType === 'normal') ? getSnap(mousePos) : null;
-
       if (isInteracting && mode === 'pose' && selectedBoneId) {
+        const scene = getCurrentScene();
         const bone = scene.bones.find(b => b.id === selectedBoneId);
         if (bone) {
           if (!bone.parentId) {
@@ -495,9 +503,9 @@
         const dx = mousePos.x - drawStartPos.x, dy = mousePos.y - drawStartPos.y;
         const len = Math.hypot(dx, dy);
         if (len > 15) {
-          let ang = Math.atan2(dy, dx) * (180 / Math.PI);
-          if (drawStartPos.pid) { ang -= scene.bones.find(b => b.id === drawStartPos.pid).worldAngle; }
-          const nb = new Bone('b_' + Date.now(), drawStartPos.pid, drawStartPos.x, drawStartPos.y, len, ang);
+          const boneType = document.getElementById('draw-bone-type').value;
+          const pid = (boneType === 'root') ? null : null; // عظمة جذر برأس أحمر مستقل
+          const nb = new Bone('b_' + Date.now(), pid, drawStartPos.x, drawStartPos.y, len, Math.atan2(dy, dx) * (180 / Math.PI));
           scene.bones.push(nb); selectedBoneId = nb.id; syncUI(); saveProjectState();
         }
         drawStartPos = null;
@@ -539,26 +547,23 @@
 
       if (showBones) {
         scene.bones.forEach(b => {
-          const isSel = b.id === selectedBoneId;
+          const isSel = b.id === selectedBoneId || b.id === weldSourceBoneId;
           const rad = (b.worldAngle * Math.PI) / 180;
           const eX = b.worldX + Math.cos(rad) * b.length, eY = b.worldY + Math.sin(rad) * b.length;
 
           ctx.beginPath(); ctx.moveTo(b.worldX, b.worldY); ctx.lineTo(eX, eY);
           ctx.lineWidth = isSel ? 4 : 2; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.4)'; ctx.stroke();
           
-          // نقطة بداية العظمة (الجذر/القاعدة) - حمراء إذا لم يكن لها أب
-          ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 5, 0, Math.PI*2);
+          // نقطة بداية العظمة (الجذر) - حمراء إذا كان جذر، بيضاء إذا كان متصلاً بأب
+          ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 6, 0, Math.PI*2);
           ctx.fillStyle = !b.parentId ? '#ef4444' : '#fff'; ctx.fill();
+          if (b.id === weldSourceBoneId) { ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3; ctx.stroke(); }
           
           // نقطة نهاية العظمة (الرأس/المفصل) - بيضاء
           ctx.beginPath(); ctx.arc(eX, eY, 4, 0, Math.PI*2);
           ctx.fillStyle = isSel ? '#60a5fa' : '#94a3b8'; ctx.fill();
         });
 
-        if (snapIndicator) {
-          ctx.beginPath(); ctx.arc(snapIndicator.x, snapIndicator.y, 8, 0, Math.PI*2);
-          ctx.fillStyle = 'rgba(16, 185, 129, 0.7)'; ctx.fill();
-        }
         if (drawStartPos && isInteracting) {
           ctx.beginPath(); ctx.moveTo(drawStartPos.x, drawStartPos.y); ctx.lineTo(mousePos.x, mousePos.y);
           ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.stroke();
@@ -576,7 +581,7 @@
       document.getElementById('texAngle').value = b.imgAngle;
 
       const parentSel = document.getElementById('bone-parent-select');
-      parentSel.innerHTML = '<option value="">(بدون أب - عظمة جذر)</option>';
+      parentSel.innerHTML = '<option value="">(بدون أب - جذر أحمر)</option>';
       scene.bones.forEach(other => {
         if(other.id !== b.id) {
           parentSel.innerHTML += `<option value="${other.id}" ${other.id === b.parentId ? 'selected' : ''}>${other.id}</option>`;
@@ -820,10 +825,16 @@
 
     function togglePlay() {
       isPlaying = !isPlaying;
-      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل متسلسل";
+      document.getElementById('btn-play').innerText = isPlaying ? "⏸ إيقاف" : "▶ تشغيل";
     }
 
-    function setMode(m) { mode = m; document.querySelectorAll('header button[id^=btn-mode]').forEach(b => b.classList.remove('active')); document.getElementById(`btn-mode-${m}`).classList.add('active'); }
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('header button[id^=btn-mode]').forEach(b => b.classList.remove('active'));
+      document.getElementById(`btn-mode-${m}`).classList.add('active');
+      if(m !== 'weld') { weldSourceBoneId = null; }
+    }
+
     function toggleBoneVisibility() { showBones = !showBones; }
     function resizeCanvas() { canvas.width = document.getElementById('canvas-width-input').value; canvas.height = document.getElementById('canvas-height-input').value; }
     function deleteSelectedBone() {
@@ -831,7 +842,7 @@
       const scene = getCurrentScene();
       const ids = new Set([selectedBoneId]); let add = true;
       while(add){ add=false; scene.bones.forEach(b=>{if(ids.has(b.parentId)&&!ids.has(b.id)){ids.add(b.id);add=true;}}); }
-      scene.bones = scene.bones.File ? scene.bones.filter(b=>!ids.has(b.id)) : scene.bones.filter(b=>!ids.has(b.id));
+      scene.bones = scene.bones.filter(b=>!ids.has(b.id));
       selectedBoneId=null; document.getElementById('selected-bone-panel').style.display='none';
       saveProjectState();
     }
