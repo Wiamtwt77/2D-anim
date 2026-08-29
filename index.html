@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Studio - Cloud & Joint Rigging</title>
+  <title>Twencraft Studio - Cloud & Resource Library</title>
   <!-- مكتبة Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -23,12 +23,17 @@
     .canvas-container { flex: 1; background: #050608; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 10px; }
     canvas { background: #0e1017; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); cursor: crosshair; }
 
-    .sidebar { width: 320px; background: #14161f; border-left: 1px solid #1f2333; display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto; z-index: 20; }
+    .sidebar { width: 340px; background: #14161f; border-left: 1px solid #1f2333; display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow-y: auto; z-index: 20; }
     .sidebar h4 { font-size: 12px; color: #60a5fa; border-bottom: 1px solid #1f2333; padding-bottom: 4px; margin-top: 4px; }
     .field { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px; }
     
     .scene-card { background: #1a1e2c; padding: 8px; border-radius: 6px; border: 1px solid #30364f; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; cursor: pointer; }
     .scene-card.active { border-color: #3b82f6; background: #22283d; }
+
+    .library-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 120px; overflow-y: auto; background: #0e1017; padding: 6px; border-radius: 6px; border: 1px solid #30364f; }
+    .lib-item { background: #1a1e2c; border: 1px solid #30364f; border-radius: 4px; padding: 4px; text-align: center; cursor: pointer; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .lib-item:hover { border-color: #3b82f6; background: #22283d; }
+    .lib-item img { width: 32px; height: 32px; object-fit: contain; background: #000; border-radius: 3px; }
 
     .director-panel { height: 210px; background: #14161f; border-top: 1px solid #1f2333; padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
     .timeline-controls { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -117,6 +122,15 @@
         <button onclick="document.getElementById('bone-img-file').click()">📁 رفع صورة أساسية (Sprite)</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
+        <!-- مكتبة الموارد السحابية -->
+        <h4>🗂️ مكتبة الموارد (Resources)</h4>
+        <div style="display:flex; gap:4px;">
+          <input type="text" id="lib-item-title" placeholder="اسم المورد (رأس، ذراع..)" style="flex:1;">
+          <button onclick="document.getElementById('lib-file').click()" class="accent" style="padding:4px 8px;">رفع للمكتبة</button>
+          <input type="file" id="lib-file" accept="image/*" style="display:none;" onchange="uploadToResourceLibrary(event)">
+        </div>
+        <div class="library-grid" id="resource-library-grid"></div>
+
         <h4>😊 مكتبة التعابير المتتابعة</h4>
         <div class="exp-box">
           <input type="text" id="new-exp-name" placeholder="اسم التعبير (مثال: غضب، كلام)">
@@ -198,11 +212,12 @@
   </div>
 
   <script>
-    // إعدادات اتصال Supabase (قم بتعديلها بمعلومات مشروعك الحقيقي)
-    const SUPABASE_URL = 'https://suljseyxbokiuxphuvoo.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_DWd_wSZa19_tOTIJBVtAcg_twD7APcf';
+    // إعدادات اتصال Supabase
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let currentUser = null;
+    let cloudResources = [];
 
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
@@ -241,9 +256,9 @@
         this.worldX = 0; this.worldY = 0; this.worldAngle = 0; this._updated = false;
         this.attachTo = 'end'; 
         this.baseImage = null;
-        this.imgW = 100; this.imgH = 100;
+        this.imgW = 50; this.imgH = 50;
         this.imgOffX = 0; this.imgOffY = 0;
-        this.imgAngle = 0;
+        this.imgAngle = 630;
         this.expressions = {};
         this.activeExpression = "default";
       }
@@ -260,6 +275,7 @@
         currentUser = session.user;
         document.getElementById('auth-btn').innerText = `👤 ${currentUser.email.split('@')[0]}`;
         cloudLoadProjects();
+        loadResourceLibrary();
       }
     }
 
@@ -284,6 +300,7 @@
         document.getElementById('auth-btn').innerText = `👤 ${currentUser.email.split('@')[0]}`;
         closeAuthModal();
         cloudLoadProjects();
+        loadResourceLibrary();
         alert("تم تسجيل الدخول بنجاح!");
       }
     }
@@ -308,7 +325,6 @@
       const { data, error } = await supabaseClient.from('accounts').select('*').eq('user_id', currentUser.id);
       if (error) { console.error(error); return; }
       if (data && data.length > 0) {
-        // تحميل أحدث مشروع كمثال
         const latest = data[data.length - 1];
         if (latest && latest.project_data) {
           scenes = latest.project_data.scenes || scenes;
@@ -319,6 +335,72 @@
           updateTimelineScale();
         }
       }
+    }
+
+    // إدارة مكتبة الموارد السحابية (Resource Library)
+    async function uploadToResourceLibrary(e) {
+      if (!currentUser) return alert("يجيب تسجيل الدخول لرفع موارد للمكتبة!");
+      const file = e.target.files[0];
+      if (!file) return;
+      let title = document.getElementById('lib-item-title').value.trim() || file.name;
+
+      const filePath = `resources/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabaseClient.storage.from('assets').upload(filePath, file);
+      if (uploadError) return alert("خطأ في رفع الملف: " + uploadError.message);
+
+      const { data: urlData } = supabaseClient.storage.from('assets').getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl;
+
+      const { error: dbError } = await supabaseClient.from('resource_items').insert([{
+        user_id: currentUser.id,
+        title: title,
+        category: 'sprite',
+        file_url: publicUrl
+      }]);
+
+      if (dbError) alert("خطأ في حفظ بيانات المورد: " + dbError.message);
+      else {
+        alert("تم رفع المورد للمكتبة السحابية بنجاح! 🗂️");
+        document.getElementById('lib-item-title').value = '';
+        loadResourceLibrary();
+      }
+    }
+
+    async function loadResourceLibrary() {
+      const { data, error } = await supabaseClient.from('resource_items').select('*');
+      if (error) { console.error(error); return; }
+      cloudResources = data || [];
+      renderResourceLibrary();
+    }
+
+    function renderResourceLibrary() {
+      const grid = document.getElementById('resource-library-grid');
+      grid.innerHTML = '';
+      cloudResources.forEach(res => {
+        const div = document.createElement('div');
+        div.className = 'lib-item';
+        div.innerHTML = `<img src="${res.file_url}" alt=""><span>${res.title}</span>`;
+        div.onclick = () => applyResourceToBone(res.file_url);
+        grid.appendChild(div);
+      });
+    }
+
+    function applyResourceToBone(url) {
+      const scene = getCurrentScene();
+      const b = scene.bones.find(x => x.id === selectedBoneId);
+      if (!b) return alert("اختر عظمة أولاً لتطبيق المورد عليها!");
+      const img = new Image();
+      img.onload = () => {
+        b.baseImage = img;
+        b.imgW = 50;
+        b.imgH = 50;
+        b.imgAngle = 630;
+        syncUI();
+        autoUpdateKeyframe(b);
+        saveProjectState();
+        alert("تم تعيين السبرايت للعظمة بنجاح!");
+      };
+      img.src = url;
     }
 
     function saveProjectState() {
@@ -340,8 +422,8 @@
             bones: (sd.bones || []).map(bd => {
               let b = new Bone(bd.id, bd.parentId, bd.x, bd.y, bd.length, bd.angle);
               b.attachTo = bd.attachTo || 'end';
-              b.imgW = bd.imgW; b.imgH = bd.imgH; b.imgOffX = bd.imgOffX; b.imgOffY = bd.imgOffY;
-              b.imgAngle = bd.imgAngle || 0;
+              b.imgW = bd.imgW || 50; b.imgH = bd.imgH || 50; b.imgOffX = bd.imgOffX; b.imgOffY = bd.imgOffY;
+              b.imgAngle = bd.imgAngle !== undefined ? bd.imgAngle : 630;
               b.activeExpression = bd.activeExpression || "default";
               if (bd.baseImageSrc) { let im = new Image(); im.src = bd.baseImageSrc; b.baseImage = im; }
               if (bd.expressions) {
@@ -721,7 +803,13 @@
       const b = scene.bones.find(x => x.id === selectedBoneId); if (!b || !e.target.files[0]) return;
       const reader = new FileReader(); reader.onload = ev => {
         const img = new Image(); img.onload = () => {
-          b.baseImage = img; b.imgW = img.width; b.imgH = img.height; syncUI(); autoUpdateKeyframe(b); saveProjectState();
+          b.baseImage = img; 
+          b.imgW = 50; 
+          b.imgH = 50; 
+          b.imgAngle = 630; 
+          syncUI(); 
+          autoUpdateKeyframe(b); 
+          saveProjectState();
         }; img.src = ev.target.result;
       }; reader.readAsDataURL(e.target.files[0]);
     }
@@ -768,9 +856,11 @@
     function updateTex() {
       const scene = getCurrentScene();
       const b = scene.bones.find(x => x.id === selectedBoneId); if(!b) return;
-      b.imgW = parseFloat(document.getElementById('texW').value); b.imgH = parseFloat(document.getElementById('texH').value);
-      b.imgOffX = parseFloat(document.getElementById('texOffX').value); b.imgOffY = parseFloat(document.getElementById('texOffY').value);
-      b.imgAngle = parseFloat(document.getElementById('texAngle').value) || 0;
+      b.imgW = parseFloat(document.getElementById('texW').value) || 50; 
+      b.imgH = parseFloat(document.getElementById('texH').value) || 50;
+      b.imgOffX = parseFloat(document.getElementById('texOffX').value) || 0; 
+      b.imgOffY = parseFloat(document.getElementById('texOffY').value) || 0;
+      b.imgAngle = parseFloat(document.getElementById('texAngle').value) || 630;
       saveProjectState();
     }
 
