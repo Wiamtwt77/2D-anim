@@ -50,7 +50,6 @@
 
     .exp-box { background: #1a1e2c; padding: 8px; border-radius: 6px; border: 1px solid #30364f; display: flex; flex-direction: column; gap: 6px; }
 
-    /* Modal نافذة تسجيل الدخول */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
     .modal-box { background: #14161f; border: 1px solid #30364f; padding: 20px; border-radius: 8px; width: 300px; display: flex; flex-direction: column; gap: 10px; }
     .modal-box h3 { color: #60a5fa; font-size: 15px; margin-bottom: 5px; }
@@ -81,7 +80,6 @@
     </div>
   </header>
 
-  <!-- نافذة تسجيل الدخول -->
   <div id="auth-modal" class="modal-overlay">
     <div class="modal-box">
       <h3>حساب المستخدم السحابي</h3>
@@ -122,7 +120,6 @@
         <button onclick="document.getElementById('bone-img-file').click()">📁 رفع صورة أساسية (Sprite)</button>
         <input type="file" id="bone-img-file" accept="image/*" style="display:none;" onchange="uploadBoneImage(event)">
 
-        <!-- مكتبة الموارد السحابية -->
         <h4>🗂️ مكتبة الموارد (Resources)</h4>
         <div style="display:flex; gap:4px;">
           <input type="text" id="lib-item-title" placeholder="اسم المورد (رأس، ذراع..)" style="flex:1;">
@@ -212,10 +209,18 @@
   </div>
 
   <script>
-    // إعدادات اتصال Supabase
+    // إعدادات اتصال Supabase (آمنة لا تكسر التطبيق إن لم تكتمل)
     const SUPABASE_URL = 'YOUR_SUPABASE_URL';
     const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let supabaseClient = null;
+    try {
+      if (SUPABASE_URL && SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch(err) {
+      console.warn("Supabase not configured yet.");
+    }
+
     let currentUser = null;
     let cloudResources = [];
 
@@ -268,8 +273,8 @@
       return scenes.find(s => s.id === currentSceneId) || scenes[0];
     }
 
-    // دوال المصادقة السحابية
     async function checkUserSession() {
+      if (!supabaseClient) return;
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) {
         currentUser = session.user;
@@ -283,6 +288,7 @@
     function closeAuthModal() { document.getElementById('auth-modal').style.display = 'none'; }
 
     async function supabaseSignUp() {
+      if (!supabaseClient) return alert("يرجى إعداد بيانات Supabase في الكود أولاً!");
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
       const { data, error } = await supabaseClient.auth.signUp({ email, password });
@@ -291,6 +297,7 @@
     }
 
     async function supabaseSignIn() {
+      if (!supabaseClient) return alert("يرجى إعداد بيانات Supabase في الكود أولاً!");
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
@@ -306,6 +313,7 @@
     }
 
     async function cloudSaveProject() {
+      if (!supabaseClient) return alert("يرجى إعداد بيانات Supabase في الكود أولاً!");
       if (!currentUser) return alert("يرجى تسجيل الدخول أولاً لحفظ المشروع سحابياً!");
       const scene = getCurrentScene();
       const projectPayload = {
@@ -321,7 +329,7 @@
     }
 
     async function cloudLoadProjects() {
-      if (!currentUser) return;
+      if (!supabaseClient || !currentUser) return;
       const { data, error } = await supabaseClient.from('accounts').select('*').eq('user_id', currentUser.id);
       if (error) { console.error(error); return; }
       if (data && data.length > 0) {
@@ -337,9 +345,9 @@
       }
     }
 
-    // إدارة مكتبة الموارد السحابية (Resource Library)
     async function uploadToResourceLibrary(e) {
-      if (!currentUser) return alert("يجيب تسجيل الدخول لرفع موارد للمكتبة!");
+      if (!supabaseClient) return alert("يرجى إعداد بيانات Supabase في الكود أولاً!");
+      if (!currentUser) return alert("يجب تسجيل الدخول لرفع موارد للمكتبة!");
       const file = e.target.files[0];
       if (!file) return;
       let title = document.getElementById('lib-item-title').value.trim() || file.name;
@@ -367,6 +375,7 @@
     }
 
     async function loadResourceLibrary() {
+      if (!supabaseClient) return;
       const { data, error } = await supabaseClient.from('resource_items').select('*');
       if (error) { console.error(error); return; }
       cloudResources = data || [];
