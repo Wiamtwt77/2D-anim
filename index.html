@@ -2,7 +2,9 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Twencraft Studio - Joint-Based Rigging</title>
+  <title>Twencraft Studio - Cloud & Joint Rigging</title>
+  <!-- مكتبة Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0a0b0e; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -15,7 +17,7 @@
     button.active { background: #3b82f6; border-color: #60a5fa; color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.4); }
     button.accent { background: #10b981; border-color: #34d399; }
     button.danger { background: #ef4444; border-color: #f87171; }
-    input[type="number"], input[type="text"], select { background: #0e1017; border: 1px solid #30364f; color: #fff; padding: 5px; border-radius: 4px; text-align: center; font-size: 12px; }
+    input[type="number"], input[type="text"], input[type="password"], select { background: #0e1017; border: 1px solid #30364f; color: #fff; padding: 5px; border-radius: 4px; text-align: center; font-size: 12px; }
 
     .workspace { flex: 1; display: flex; position: relative; overflow: hidden; }
     .canvas-container { flex: 1; background: #050608; display: flex; justify-content: center; align-items: center; position: relative; overflow: auto; padding: 10px; }
@@ -42,13 +44,18 @@
     .expr-clip-item { background: rgba(16, 185, 129, 0.6); border-color: #10b981; }
 
     .exp-box { background: #1a1e2c; padding: 8px; border-radius: 6px; border: 1px solid #30364f; display: flex; flex-direction: column; gap: 6px; }
+
+    /* Modal نافذة تسجيل الدخول */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-box { background: #14161f; border: 1px solid #30364f; padding: 20px; border-radius: 8px; width: 300px; display: flex; flex-direction: column; gap: 10px; }
+    .modal-box h3 { color: #60a5fa; font-size: 15px; margin-bottom: 5px; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="tool-group">
-      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك المفصل (Pose)</button>
+      <button id="btn-mode-pose" class="active" onclick="setMode('pose')">🖐️ تحريك (Pose)</button>
       <button id="btn-mode-draw" onclick="setMode('draw')">🦴 رسم العظام</button>
       <button onclick="toggleBoneVisibility()">👁️ إخفاء الهيكل</button>
     </div>
@@ -63,10 +70,25 @@
     </div>
 
     <div class="tool-group">
-      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف العظمة</button>
-      <button onclick="clearLocalStorageData()" style="background:#334155; font-size:11px;">🔄 إعادة ضبط</button>
+      <button class="accent" onclick="cloudSaveProject()">☁️ حفظ بالسحاب</button>
+      <button id="auth-btn" onclick="openAuthModal()" style="background:#0284c7;">👤 تسجيل الدخول</button>
+      <button class="danger" onclick="deleteSelectedBone()">🗑️ حذف عظمة</button>
     </div>
   </header>
+
+  <!-- نافذة تسجيل الدخول -->
+  <div id="auth-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>حساب المستخدم السحابي</h3>
+      <input type="text" id="auth-email" placeholder="البريد الإلكتروني">
+      <input type="password" id="auth-password" placeholder="كلمة المرور">
+      <div style="display:flex; gap:6px; margin-top:5px;">
+        <button onclick="supabaseSignIn()" class="accent" style="flex:1;">دخول</button>
+        <button onclick="supabaseSignUp()" style="flex:1; background:#334155;">إنشاء حساب</button>
+      </div>
+      <button onclick="closeAuthModal()" style="background:transparent; border:none; color:#94a3b8; margin-top:5px; cursor:pointer;">إغلاق</button>
+    </div>
+  </div>
 
   <div class="workspace">
     <div class="canvas-container">
@@ -176,6 +198,12 @@
   </div>
 
   <script>
+    // إعدادات اتصال Supabase (قم بتعديلها بمعلومات مشروعك الحقيقي)
+    const SUPABASE_URL = 'https://suljseyxbokiuxphuvoo.supabase.co';
+    const SUPABASE_ANON_KEY = '634b2480-de6c-48e0-9bf0-b5f5b3771160';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUser = null;
+
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
 
@@ -200,7 +228,7 @@
     let drawStartPos = null;
     let autoParentId = null;
     let mousePos = { x: 0, y: 0 };
-    let activeDrag = null; // { boneId, type: 'tip' | 'root', startX, startY, mouseStartX, mouseStartY }
+    let activeDrag = null;
     let draggingAudioId = null;
     let audioDragStartX = 0;
     let draggingExprClipId = null;
@@ -223,6 +251,74 @@
 
     function getCurrentScene() {
       return scenes.find(s => s.id === currentSceneId) || scenes[0];
+    }
+
+    // دوال المصادقة السحابية
+    async function checkUserSession() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        document.getElementById('auth-btn').innerText = `👤 ${currentUser.email.split('@')[0]}`;
+        cloudLoadProjects();
+      }
+    }
+
+    function openAuthModal() { document.getElementById('auth-modal').style.display = 'flex'; }
+    function closeAuthModal() { document.getElementById('auth-modal').style.display = 'none'; }
+
+    async function supabaseSignUp() {
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) alert(error.message);
+      else { alert("تم إرسال بريد التفعيل أو التسجيل بنجاح!"); closeAuthModal(); }
+    }
+
+    async function supabaseSignIn() {
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) alert(error.message);
+      else {
+        currentUser = data.user;
+        document.getElementById('auth-btn').innerText = `👤 ${currentUser.email.split('@')[0]}`;
+        closeAuthModal();
+        cloudLoadProjects();
+        alert("تم تسجيل الدخول بنجاح!");
+      }
+    }
+
+    async function cloudSaveProject() {
+      if (!currentUser) return alert("يرجى تسجيل الدخول أولاً لحفظ المشروع سحابياً!");
+      const scene = getCurrentScene();
+      const projectPayload = {
+        user_id: currentUser.id,
+        title: scene.title || "مشروع استوديو التحريك",
+        project_data: { scenes, currentSceneId },
+        updated_at: new Date()
+      };
+
+      const { data, error } = await supabaseClient.from('accounts').insert([projectPayload]);
+      if (error) alert("خطأ في الحفظ السحابي: " + error.message);
+      else alert("تم حفظ المشروع في جدول accounts سحابياً بنجاح! ☁️");
+    }
+
+    async function cloudLoadProjects() {
+      if (!currentUser) return;
+      const { data, error } = await supabaseClient.from('accounts').select('*').eq('user_id', currentUser.id);
+      if (error) { console.error(error); return; }
+      if (data && data.length > 0) {
+        // تحميل أحدث مشروع كمثال
+        const latest = data[data.length - 1];
+        if (latest && latest.project_data) {
+          scenes = latest.project_data.scenes || scenes;
+          currentSceneId = latest.project_data.currentSceneId || scenes[0].id;
+          maxFrames = getCurrentScene().duration || 120;
+          document.getElementById('max-frames').value = maxFrames;
+          renderScenesList();
+          updateTimelineScale();
+        }
+      }
     }
 
     function saveProjectState() {
@@ -264,13 +360,6 @@
       document.getElementById('max-frames').value = maxFrames;
       renderScenesList();
       updateTimelineScale();
-    }
-
-    function clearLocalStorageData() {
-      if(confirm("هل تريد إعادة ضبط المشروع بالكامل؟")) {
-        localStorage.removeItem('twencraft_rigid_project');
-        location.reload();
-      }
     }
 
     function renderScenesList() {
@@ -459,14 +548,12 @@
           const eX = b.worldX + Math.cos(rad) * b.length;
           const eY = b.worldY + Math.sin(rad) * b.length;
 
-          // 1. التحقق من النقر على المفصل الطرفي (رأس العظمة) لتدويرها
           if (Math.hypot(mousePos.x - eX, mousePos.y - eY) < 16) {
             selectedBoneId = b.id;
             activeDrag = { boneId: b.id, type: 'tip' };
             syncUI();
             break;
           }
-          // 2. التحقق من النقر على جذر/بداية العظمة (المفصل الأساسي)
           if (Math.hypot(mousePos.x - b.worldX, mousePos.y - b.worldY) < 16) {
             selectedBoneId = b.id;
             activeDrag = { boneId: b.id, type: 'root', startX: b.x, startY: b.y, mouseStartX: mousePos.x, mouseStartY: mousePos.y };
@@ -485,7 +572,6 @@
         const bone = scene.bones.find(b => b.id === activeDrag.boneId);
         if (bone) {
           if (activeDrag.type === 'tip') {
-            // سحب المفصل الطرفي يدور العظمة بسلاسة نحو الماوس
             const dx = mousePos.x - bone.worldX;
             const dy = mousePos.y - bone.worldY;
             let targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -495,7 +581,6 @@
             }
             bone.angle = targetAngle;
           } else if (activeDrag.type === 'root' && !bone.parentId) {
-            // سحب مفصل الجذر للعظمة الرئيسية يحركها بالكامل
             bone.x = activeDrag.startX + (mousePos.x - activeDrag.mouseStartX);
             bone.y = activeDrag.startY + (mousePos.y - activeDrag.mouseStartY);
           }
@@ -570,16 +655,13 @@
           const eX = b.worldX + Math.cos(rad) * b.length;
           const eY = b.worldY + Math.sin(rad) * b.length;
 
-          // رسم جسم العظمة
           ctx.beginPath(); ctx.moveTo(b.worldX, b.worldY); ctx.lineTo(eX, eY);
           ctx.lineWidth = isSel ? 4 : 2; ctx.strokeStyle = isSel ? '#3b82f6' : 'rgba(148, 163, 184, 0.4)'; ctx.stroke();
           
-          // رسم مفصل الجذر (البداية)
           ctx.beginPath(); ctx.arc(b.worldX, b.worldY, 5, 0, Math.PI*2);
           ctx.fillStyle = '#fff'; ctx.fill();
           ctx.strokeStyle = isSel ? '#3b82f6' : '#1f2333'; ctx.lineWidth = 2; ctx.stroke();
           
-          // رسم المفصل الطرفي (النهاية - مقبض التدوير)
           ctx.beginPath(); ctx.arc(eX, eY, 6, 0, Math.PI*2);
           ctx.fillStyle = isSel ? '#60a5fa' : '#38bdf8'; ctx.fill();
           ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -884,6 +966,7 @@
       drawTimelineNodes();
       renderExpressionClips();
       renderAudioClips();
+      checkUserSession();
     };
   </script>
 </body>
