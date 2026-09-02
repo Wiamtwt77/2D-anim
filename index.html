@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twencraft Upload Studio - نظام المفاصل المتسلسلة</title>
+    <title>Twencraft Upload Studio - النظام الهيكلي المكتمل</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -81,6 +81,7 @@
             position: absolute;
             width: 0;
             height: 0;
+            transform-style: preserve-3d;
         }
         .body-part {
             position: absolute;
@@ -88,8 +89,8 @@
             pointer-events: none;
         }
         .bone-control {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
             border-bottom: 1px solid #444;
             font-size: 13px;
         }
@@ -98,16 +99,15 @@
             justify-content: space-between;
             color: #4CAF50;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
     </style>
 </head>
 <body>
 
     <div class="app-container">
-        <!-- لوحة التحكم في المفاصل المتسلسلة -->
         <div class="sidebar">
-            <div style="font-weight: bold; margin-bottom: 12px; color: #ffeb3b; font-size: 15px;">نظام المفاصل المتسلسلة (FK)</div>
+            <div style="font-weight: bold; margin-bottom: 12px; color: #ffeb3b; font-size: 15px;">نظام الهيكل العظمي (6 مفاصل مرتبطة)</div>
             <div id="bonesControls"></div>
         </div>
 
@@ -124,68 +124,69 @@
     </div>
 
     <script>
-        // هيكل بيانات الشخصية مع ربط الأبناء بالآباء بدقة لضمان عدم انفصال المفاصل (مثل الكتف مع الساعد)
+        // هيكل بيانات الشخصية (محدد بـ 6 مفاصل رئيسية مترابطة تشريحياً لمنع الانفصال)
         const charactersData = [
             {
                 id: "hero_mascot",
-                name: "شخصية متقدمة (مفاصل متسلسلة)",
+                name: "الشخصية الأساسية (6 مفاصل متكاملة)",
                 rootBone: "torso",
                 bones: {
                     torso: {
                         src: "./res/torso.png",
-                        width: 74, x: 0, y: -32, zIndex: 2,
+                        width: 74,
+                        x: 0,
+                        y: -32,
+                        zIndex: 2,
                         origin: "center center",
                         minRot: -20, maxRot: 20,
-                        children: ["head", "right_upper_arm", "left_upper_arm", "right_thigh", "left_thigh"]
+                        children: ["head", "right_arm", "left_arm", "right_leg", "left_leg"]
                     },
                     head: {
                         src: "./res/head.png",
-                        width: 88, x: 0, y: -55, zIndex: 3,
+                        width: 88,
+                        x: 0,
+                        y: -45,
+                        zIndex: 3,
                         origin: "bottom center",
                         minRot: -45, maxRot: 45,
                         children: []
                     },
-                    // الذراع اليمنى (مقسمة لضمان عدم انفصال الكتف عن الساعد)
-                    right_upper_arm: {
-                        src: "./res/right_upper_arm.png",
-                        width: 30, x: 32, y: -30, zIndex: 1,
+                    right_arm: {
+                        src: "./res/right_arm.png",
+                        width: 32,
+                        x: 32,
+                        y: -30,
+                        zIndex: 1,
                         origin: "top center",
                         minRot: -90, maxRot: 90,
-                        children: ["right_lower_arm"]
-                    },
-                    right_lower_arm: {
-                        src: "./res/right_lower_arm.png",
-                        width: 26, x: 0, y: 40, zIndex: 1, // يبدأ من نهاية العضد تماماً
-                        origin: "top center",
-                        minRot: -90, maxRot: 0,
                         children: []
                     },
-                    // الذراع اليسرى
-                    left_upper_arm: {
-                        src: "./res/left_upper_arm.png",
-                        width: 30, x: -35, y: -30, zIndex: 4,
+                    left_arm: {
+                        src: "./res/left_arm.png",
+                        width: 32,
+                        x: -32,
+                        y: -30,
+                        zIndex: 4,
                         origin: "top center",
                         minRot: -90, maxRot: 90,
-                        children: ["left_lower_arm"]
-                    },
-                    left_lower_arm: {
-                        src: "./res/left_lower_arm.png",
-                        width: 26, x: 0, y: 40, zIndex: 4,
-                        origin: "top center",
-                        minRot: -90, maxRot: 0,
                         children: []
                     },
-                    // الأرجل (يمكن تقسيمها أيضاً لنفس السبب)
-                    right_thigh: {
-                        src: "./res/right_thigh.png",
-                        width: 28, x: 18, y: 40, zIndex: 1,
+                    right_leg: {
+                        src: "./res/right_leg.png",
+                        width: 32,
+                        x: 18,
+                        y: 25,
+                        zIndex: 1,
                         origin: "top center",
                         minRot: -45, maxRot: 45,
                         children: []
                     },
-                    left_thigh: {
-                        src: "./res/left_thigh.png",
-                        width: 28, x: -18, y: 40, zIndex: 1,
+                    left_leg: {
+                        src: "./res/left_leg.png",
+                        width: 25,
+                        x: -18,
+                        y: 25,
+                        zIndex: 1,
                         origin: "top center",
                         minRot: -45, maxRot: 45,
                         children: []
@@ -195,17 +196,14 @@
         ];
 
         let activeCharacterIndex = 0;
-        
-        // خريطة لتخزين زوايا كل مفصل على حدة
-        let boneRotations = {};
-
-        function initBoneRotations() {
-            boneRotations = {};
-            const char = charactersData[activeCharacterIndex];
-            Object.keys(char.bones).forEach(partName => {
-                boneRotations[partName] = 0;
-            });
-        }
+        let boneRotations = {
+            torso: 0,
+            head: 0,
+            right_arm: 0,
+            left_arm: 0,
+            right_leg: 0,
+            left_leg: 0
+        };
 
         const rigContainer = document.getElementById('characterRig');
         const characterSelect = document.getElementById('characterSelect');
@@ -221,14 +219,16 @@
             });
         }
 
-        // بناء العقد الشجرية وتوارث التحويلات الهندسية (Forward Kinematics)
+        // بناء العقد الشجرية مع دمج التحولات والدوران في عقدة المفصل لضمان عدم انفصال الأجزاء
         function createBoneElement(boneName, bonesDict) {
             const bone = bonesDict[boneName];
+            const rot = boneRotations[boneName] || 0;
             
             const nodeDiv = document.createElement('div');
             nodeDiv.className = 'bone-node';
             nodeDiv.style.zIndex = bone.zIndex;
-            nodeDiv.style.transform = `translate(${bone.x}px, ${bone.y}px)`;
+            nodeDiv.style.transform = `translate(${bone.x}px, ${bone.y}px) rotate(${rot}deg)`;
+            nodeDiv.style.transformOrigin = bone.origin;
 
             const img = document.createElement('img');
             img.src = bone.src;
@@ -236,25 +236,22 @@
             img.style.width = bone.width + 'px';
             img.style.transformOrigin = bone.origin;
             
-            const rot = boneRotations[boneName] || 0;
-
             if (bone.origin === 'top center') {
                 img.style.left = '50%';
                 img.style.top = '0';
-                img.style.transform = `translateX(-50%) rotate(${rot}deg)`;
+                img.style.transform = 'translateX(-50%)';
             } else if (bone.origin === 'bottom center') {
                 img.style.left = '50%';
                 img.style.bottom = '0';
-                img.style.transform = `translateX(-50%) rotate(${rot}deg)`;
+                img.style.transform = 'translateX(-50%)';
             } else {
                 img.style.left = '50%';
                 img.style.top = '50%';
-                img.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+                img.style.transform = 'translate(-50%, -50%)';
             }
             
             nodeDiv.appendChild(img);
 
-            // تتبع الأبناء وربطهم لتوارث الحركة تلقائياً ودون انفصال
             if (bone.children && bone.children.length > 0) {
                 bone.children.forEach(childName => {
                     nodeDiv.appendChild(createBoneElement(childName, bonesDict));
@@ -298,13 +295,12 @@
 
         characterSelect.addEventListener('change', (e) => {
             activeCharacterIndex = parseInt(e.target.value);
-            initBoneRotations();
+            Object.keys(boneRotations).forEach(k => boneRotations[k] = 0);
             buildBoneControls();
             renderCharacter();
         });
 
         initLibrary();
-        initBoneRotations();
         buildBoneControls();
         renderCharacter();
     </script>
